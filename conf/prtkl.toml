@@ -1,0 +1,9 @@
+[node]
+name = "Ivan"
+host = "192.168.0.113"
+port = "7878"
+thread_count = 4
+
+[cluster]
+name = "Bramchalka"
+neighbours = ["192.168.0.165"]

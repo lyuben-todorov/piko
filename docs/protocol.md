@@ -17,6 +17,8 @@ Each of the receivers adds the sender, Ivan, to their list. Ivan adds each of th
 this operation, Ivan can send a `SEQRES` to each of its neighbours. Each one responds with their `SEQ` number     
 (which should be the same) and marks Ivan locally as `WRK`. Ivan is then promoted to `WRK`.    
 
+The only exception is when the node's neighbour list is empty, in which case it goes straight into `WRK`.
+
 ### Work phase
 A worker is required to send a heartbeat to each (for now) of its neighbours each 1s. If a node goes silent for more     
 than `5`, seconds, it is removed from the cluster.
