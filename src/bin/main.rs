@@ -11,8 +11,8 @@ use std::sync::mpsc::channel;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use piko::discovery::dsc;
-use piko::State::{SHUTDOWN, DSC};
-use piko::State;
+use piko::state::Mode::{SHUTDOWN, DSC};
+use piko::state::{Mode, State};
 
 fn main() {
     let mut settings = Config::default();
@@ -31,6 +31,12 @@ fn main() {
         .get_int("node.thread_count")
         .expect("Missing node thread_count.");
 
+    let neighbours = settings
+        .get_array("cluster.neighbours")
+        .expect("Missing cluster settings.")
+        .iter()
+        .map(|value| value.into_str().expect("Error parsing cluster host name."))
+        .collect::<Vec<String>>();
 
     let thread_pool = ThreadPool::new(thread_count as usize);
     println!("Starting worker pool with count {}.", thread_count);
@@ -52,22 +58,22 @@ fn main() {
     // let state = Arc::new(Mutex::new(DSC));
     // let mut state = Arc::clone(&state);
 
-    let mut state = State::DSC;
+    let mut state: State = State::new(name, Mode::DSC, neighbours);
 
     loop {
         println!("Loop");
 
-        match &state {
-            State::DSC => {
-                state = dsc(&thread_pool, &state);
+        match &state.mode {
+            Mode::DSC => {
+                dsc(&thread_pool, &mut state);
                 continue;
             }
-            State::WRK => {}
-            State::ERR => {}
-            State::PANIC => {}
-            State::SHUTDOWN => {
+            Mode::WRK => {}
+            Mode::ERR => {}
+            Mode::PANIC => {}
+            Mode::SHUTDOWN => {
                 println!("Bye!");
-                break
+                break;
             }
         }
     }
