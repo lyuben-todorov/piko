@@ -3,14 +3,13 @@ use crate::State;
 use std::sync::{Mutex, Arc};
 use crate::State::{SHUTDOWN, DSC};
 
-pub fn dsc(threadpool: &ThreadPool, mut state: &State) {
-    threadpool.execute(|| println!("Hi"));
+pub fn dsc(thread_pool: &ThreadPool, state: &State) -> State {
+    thread_pool.execute(|| {});
 
     match state {
-        DSC => {
-            state = &SHUTDOWN;
-            print!("Yes");
+        State::DSC => {
+            State::SHUTDOWN
         }
-        _ => {}
+        _ => { State::SHUTDOWN }
     }
 }

@@ -12,6 +12,7 @@ use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use piko::discovery::dsc;
 use piko::State::{SHUTDOWN, DSC};
+use piko::State;
 
 fn main() {
     let mut settings = Config::default();
@@ -51,23 +52,25 @@ fn main() {
     // let state = Arc::new(Mutex::new(DSC));
     // let mut state = Arc::clone(&state);
 
-    let mut state = DSC;
+    let mut state = State::DSC;
 
     loop {
-        match state {
-            DSC => { dsc(&thread_pool, &state) }
-            WRK => {}
-            ERR => {}
-            PANIC => {}
-            SHUTDOWN => {
-                break;
+        println!("Loop");
+
+        match &state {
+            State::DSC => {
+                state = dsc(&thread_pool, &state);
+                continue;
+            }
+            State::WRK => {}
+            State::ERR => {}
+            State::PANIC => {}
+            State::SHUTDOWN => {
+                println!("Bye!");
+                break
             }
         }
     }
-    // let state = Arc::clone(&state);
-    // let mut new = state.lock().unwrap();
-    //
-    // *new = WRK;
 
 
     println!("Shutting down.");
