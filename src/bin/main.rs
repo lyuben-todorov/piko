@@ -48,13 +48,14 @@ fn main() {
     println!("Node {} accepting connections.", name);
     println!("Starting main worker process.");
 
-    let state = Arc::new(Mutex::new(DSC));
-    let mut state = Arc::clone(&state);
+    // let state = Arc::new(Mutex::new(DSC));
+    // let mut state = Arc::clone(&state);
+
+    let mut state = DSC;
 
     loop {
-        let mut state = state.lock().unwrap();
-        match &*state {
-            DSC => { dsc(&thread_pool, &*state) }
+        match state {
+            DSC => { dsc(&thread_pool, &state) }
             WRK => {}
             ERR => {}
             PANIC => {}
