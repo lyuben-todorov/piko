@@ -12,7 +12,9 @@ use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use piko::discovery::dsc;
 use piko::state::Mode::{SHUTDOWN, DSC};
-use piko::state::{Mode, State};
+use piko::state::{Mode, State, Node};
+use std::collections::HashMap;
+use std::hash::Hash;
 
 fn main() {
     let mut settings = Config::default();
@@ -31,12 +33,13 @@ fn main() {
         .get_int("node.thread_count")
         .expect("Missing node thread_count.");
 
-    let neighbours = settings
+    let neighbour_host_names_settings = settings
         .get_array("cluster.neighbours")
-        .expect("Missing cluster settings.")
-        .iter()
-        .map(|value| value.into_str().expect("Error parsing cluster host name."))
-        .collect::<Vec<String>>();
+        .expect("Missing cluster settings.");
+    let mut neighbour_host_names = Vec::new();
+    for result in neighbour_host_names_settings {
+        neighbour_host_names.push(result.into_str().expect("Error parsing cluster node entry."));
+    }
 
     let thread_pool = ThreadPool::new(thread_count as usize);
     println!("Starting worker pool with count {}.", thread_count);
@@ -54,9 +57,7 @@ fn main() {
     };
     println!("Node {} accepting connections.", name);
     println!("Starting main worker process.");
-
-    // let state = Arc::new(Mutex::new(DSC));
-    // let mut state = Arc::clone(&state);
+    let neighbours = HashMap::<String, Node>::new();
 
     let mut state: State = State::new(name, Mode::DSC, neighbours);
 
@@ -65,7 +66,7 @@ fn main() {
 
         match &state.mode {
             Mode::DSC => {
-                dsc(&thread_pool, &mut state);
+                dsc(&thread_pool, &mut state, &neighbour_host_names);
                 continue;
             }
             Mode::WRK => {}

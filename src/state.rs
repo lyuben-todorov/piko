@@ -1,15 +1,34 @@
+use std::collections::{HashMap, HashSet};
+
 pub struct State {
     pub name: String,
     pub mode: Mode,
-    pub neighbours: Vec<String>,
+    pub neighbours: HashMap<String, Node>,
 }
 
 impl State {
-    pub fn new(name: String, mode: Mode, neighbours: Vec<String>) -> State {
+    pub fn new(name: String, mode: Mode, neighbours: HashMap<String, Node>) -> Self {
         State { name, mode, neighbours }
     }
+
+    fn add_neighbour(&mut self, name: &str, node: Node) {
+        self.neighbours.insert(name.parse().unwrap(), node);
+    }
+
     pub fn change_mode(&mut self, mode: Mode) {
         self.mode = mode;
+    }
+}
+
+pub struct Node {
+    pub name: String,
+    pub mode: Mode,
+    pub host: String,
+}
+
+impl Node {
+    pub fn new(name: String, mode: Mode, host: String) -> Node {
+        Node { name, mode, host }
     }
 }
 
