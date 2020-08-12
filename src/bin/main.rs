@@ -1,18 +1,15 @@
 extern crate glob;
 extern crate config;
 extern crate rayon;
+
 use config::*;
 
-use std::net::{TcpListener, Ipv4Addr};
+use std::net::{TcpListener, Ipv4Addr, SocketAddrV4};
 use std::net::SocketAddr;
-use std::sync::mpsc::channel;
 use std::str::FromStr;
-use std::sync::{Arc, Mutex};
 use piko::discovery::dsc;
-use piko::state::Mode::{SHUTDOWN, DSC};
 use piko::state::{Mode, State, Node};
 use std::collections::HashMap;
-use std::hash::Hash;
 
 fn main() {
     let mut settings = Config::default();
@@ -23,7 +20,7 @@ fn main() {
         .expect("Missing node name.");
     let port = settings
         .get_int("node.port")
-        .expect("Missing node port.") as u16;
+        .expect("Missing node port.");
     let host_name = settings
         .get_str("node.host")
         .expect("Missing node hostname");
@@ -39,12 +36,12 @@ fn main() {
         neighbour_host_names.push(result.into_str().expect("Error parsing cluster node entry."));
     }
 
-    rayon::ThreadPoolBuilder::new().num_threads(22).build_global().unwrap();
-    println!("Starting worker pool with count {}.", thread_count);
+    rayon::ThreadPoolBuilder::new().num_threads(thread_count as usize).build_global().unwrap();
+    println!("Setting worker pool count to {}.", thread_count);
 
 
     let addr = Ipv4Addr::from_str(&host_name).expect("Error parsing host name");
-    let address = SocketAddr::from((addr, port));
+    let address = SocketAddr::from(SocketAddrV4::new(addr, port as u16));
     let listener = TcpListener::bind(address);
     let listener = match listener {
         Ok(listener) => {
@@ -53,6 +50,7 @@ fn main() {
         }
         Err(error) => panic!("Error during port binding: {}", error),
     };
+
     println!("Node {} accepting connections.", name);
     println!("Starting main worker process.");
     let neighbours = HashMap::<String, Node>::new();
@@ -64,7 +62,7 @@ fn main() {
 
         match &state.mode {
             Mode::DSC => {
-                dsc(&thread_pool, &mut state, neighbour_host_names);
+                dsc(&mut state, &neighbour_host_names);
                 continue;
             }
             Mode::WRK => {}

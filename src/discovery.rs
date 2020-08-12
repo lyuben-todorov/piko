@@ -1,24 +1,22 @@
 use std::sync::{Mutex, Arc};
-use crate::state::Mode::{SHUTDOWN, DSC};
 use crate::state::{Mode, State, Node};
-use std::thread::JoinHandle;
-use std::thread;
 use std::collections::HashMap;
 
 // Start discovery routine
-pub fn dsc(thread_pool: &ThreadPool, state: &mut State, neighbour_list:  Vec<String>) {
+pub fn dsc(state: &mut State, neighbour_list: &[String]) {
     let node_list: Arc<Mutex<HashMap<String, Node>>> =
         Arc::new(Mutex::new(HashMap::new()));
 
-    for host in neighbour_list {
-        let nodes = Arc::clone(&node_list);
-        thread_pool.execute(move || handshake(&host, nodes));
-    }
+    rayon::scope(|s| {
+        for host in neighbour_list {
+            let list = Arc::clone(&node_list);
+            s.spawn(move |_| handshake(&host, list));
+        }
+    });
 
-    thread_pool.join();
-    state.change_mode(Mode::WRK);
+    state.change_mode(Mode::SHUTDOWN);
 }
 
 fn handshake(host: &String, node_list: Arc<Mutex<HashMap<String, Node>>>) {
-    // do requests
+    println!("{}", host);
 }
