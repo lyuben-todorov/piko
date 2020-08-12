@@ -21,6 +21,7 @@ fn main() {
 
     let mut config_path = current_dir().expect("Couldn't get working directory");
 
+    println!("{}", argv.len());
     if argv.len() > 1 {
         let arg1 = argv.get(1).unwrap();
         let arg2 = argv.get(2).unwrap();
