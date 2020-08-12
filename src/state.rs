@@ -4,15 +4,17 @@ pub struct State {
     pub name: String,
     pub mode: Mode,
     pub neighbours: HashMap<String, Node>,
+    pub cluster_size: usize,
 }
 
 impl State {
     pub fn new(name: String, mode: Mode, neighbours: HashMap<String, Node>) -> Self {
-        State { name, mode, neighbours }
+        State { name, mode, neighbours, cluster_size: 0 }
     }
 
-    fn add_neighbour(&mut self, name: &str, node: Node) {
+    pub fn add_neighbour(&mut self, name: &str, node: Node) {
         self.neighbours.insert(name.parse().unwrap(), node);
+        self.cluster_size += 1;
     }
 
     pub fn change_mode(&mut self, mode: Mode) {
