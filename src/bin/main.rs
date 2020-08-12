@@ -68,7 +68,7 @@ fn main() {
     let listener = TcpListener::bind(address);
     let listener = match listener {
         Ok(listener) => {
-            println!("Bound to port {}.", port);
+            println!("Bound to socket {}.", address.to_string());
             listener
         }
         Err(error) => panic!("Error during port binding: {}", error),
