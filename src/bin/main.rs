@@ -1,9 +1,7 @@
-extern crate threadpool;
 extern crate glob;
 extern crate config;
-
+extern crate rayon;
 use config::*;
-use threadpool::ThreadPool;
 
 use std::net::{TcpListener, Ipv4Addr};
 use std::net::SocketAddr;
@@ -41,7 +39,7 @@ fn main() {
         neighbour_host_names.push(result.into_str().expect("Error parsing cluster node entry."));
     }
 
-    let thread_pool = ThreadPool::new(thread_count as usize);
+    rayon::ThreadPoolBuilder::new().num_threads(22).build_global().unwrap();
     println!("Starting worker pool with count {}.", thread_count);
 
 
@@ -66,7 +64,7 @@ fn main() {
 
         match &state.mode {
             Mode::DSC => {
-                dsc(&thread_pool, &mut state, &neighbour_host_names);
+                dsc(&thread_pool, &mut state, neighbour_host_names);
                 continue;
             }
             Mode::WRK => {}

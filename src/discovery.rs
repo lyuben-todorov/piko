@@ -1,4 +1,3 @@
-use threadpool::ThreadPool;
 use std::sync::{Mutex, Arc};
 use crate::state::Mode::{SHUTDOWN, DSC};
 use crate::state::{Mode, State, Node};
@@ -7,7 +6,7 @@ use std::thread;
 use std::collections::HashMap;
 
 // Start discovery routine
-pub fn dsc(thread_pool: &ThreadPool, state: &mut State, neighbour_list:  &Vec<String>) {
+pub fn dsc(thread_pool: &ThreadPool, state: &mut State, neighbour_list:  Vec<String>) {
     let node_list: Arc<Mutex<HashMap<String, Node>>> =
         Arc::new(Mutex::new(HashMap::new()));
 
