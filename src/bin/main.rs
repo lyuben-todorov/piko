@@ -10,10 +10,28 @@ use std::str::FromStr;
 use piko::discovery::dsc;
 use piko::state::{Mode, State, Node};
 use std::collections::HashMap;
+use std::env;
+use std::env::current_dir;
+use std::path::{Path, PathBuf};
 
 fn main() {
     let mut settings = Config::default();
-    settings.merge(File::with_name("conf/prtkl.toml")).expect("Couldn't open config file!");
+
+    let argv: Vec<String> = env::args().collect();
+
+    let mut config_path = current_dir().expect("Couldn't get bin directory");
+
+    if argv.len() > 1 {
+        let arg1 = argv.get(1).unwrap();
+        let arg2 = argv.get(2).unwrap();
+        if arg1 == "-p" {
+            config_path.push(arg2);
+        }
+    } else {
+        config_path.push("conf/prtkl.toml=");
+    }
+     
+    settings.merge(File::from(config_path)).expect("Couldn't open config file!");
 
     let name = settings
         .get_str("node.name")
