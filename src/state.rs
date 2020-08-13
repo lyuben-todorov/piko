@@ -1,15 +1,19 @@
 use std::collections::{HashMap};
+use sha2::{Sha256, Digest};
+use byteorder::{ReadBytesExt, BigEndian};
 
 pub struct State {
     pub name: String,
     pub mode: Mode,
+    pub id: u32,
     pub neighbours: HashMap<String, Node>,
     pub cluster_size: usize,
 }
 
 impl State {
     pub fn new(name: String, mode: Mode, neighbours: HashMap<String, Node>) -> Self {
-        State { name, mode, neighbours, cluster_size: 0 }
+        let id = Sha256::digest(name.as_bytes()).as_slice().read_u32::<BigEndian>().unwrap();
+        State { name, mode, id, neighbours, cluster_size: 0 }
     }
 
     pub fn add_neighbour(&mut self, name: &str, node: Node) {

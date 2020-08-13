@@ -1,18 +1,25 @@
 extern crate glob;
 extern crate config;
 extern crate rayon;
+extern crate bit_vec;
+extern crate sha2;
+extern crate byteorder;
 
 use config::*;
 
 use std::net::{TcpListener, Ipv4Addr, SocketAddrV4};
 use std::net::SocketAddr;
 use std::str::FromStr;
-use piko::discovery::dsc;
+use piko::dsc::dsc;
 use piko::state::{Mode, State, Node};
 use std::collections::HashMap;
 use std::env;
 use std::env::current_dir;
 use std::path::{Path, PathBuf};
+use sha2::{Sha256, Digest};
+use sha2::digest::DynDigest;
+use std::ptr::hash;
+use piko::wrk::wrk;
 
 fn main() {
     let mut settings = Config::default();
@@ -41,6 +48,7 @@ fn main() {
     let name = settings
         .get_str("node.name")
         .expect("Missing node name.");
+
     let port = settings
         .get_int("node.port")
         .expect("Missing node port.");
@@ -74,11 +82,11 @@ fn main() {
         Err(error) => panic!("Error during port binding: {}", error),
     };
 
-    println!("Node {} accepting connections.", name);
-    println!("Starting main worker process.");
     let neighbours = HashMap::<String, Node>::new();
-
     let mut state: State = State::new(name, Mode::DSC, neighbours);
+
+    println!("Node {} initialized", state.name);
+    println!("Starting main worker process.");
 
     loop {
         println!("Loop");
@@ -88,7 +96,7 @@ fn main() {
                 dsc(&mut state, &neighbour_host_names);
                 continue;
             }
-            Mode::WRK => {}
+            Mode::WRK => { wrk(&mut state, &listener) }
             Mode::ERR => {}
             Mode::PANIC => {}
             Mode::SHUTDOWN => {

@@ -5,8 +5,6 @@ neighbours B and C and receive acknowledgements that the message has been proces
 For example, if the cluster reaches a consensus on the last message processed having sequence number `5`, a node is    
 capable of acquiring a sequence 'lock' on the next sequence number, `6`, and publishing it.    
 
-Operates on byte-encoded JSON sent over TCP.    
-
 Each node is in either of 3 general states: `DSC`, `WRK`, `ERR` for discovery, work and error respectively.
 
 ### Discovery phase  
@@ -23,13 +21,15 @@ The only exception is when the node's neighbour list is empty, in which case it 
 A worker is required to send a heartbeat to each (for now) of its neighbours each 1s. If a node goes silent for more     
 than `5`, seconds, it is removed from the cluster.
 
-### Message format 
-```
-{
-    "type": TYPE,
-    "timestamp": some time format
-}
-```
+### Protocol format 
+A message contains the following:    
+##### 64-bit header:
+* 16-bit node identifier
+* 16-bit reserved for cloud metrics
+* 32-bit message size `n`
+##### `n`-bit byte-encoded JSON
+
+
 
 ##### Types
 * HEARTBEAT
