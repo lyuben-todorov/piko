@@ -4,7 +4,7 @@ extern crate rayon;
 extern crate bit_vec;
 extern crate sha2;
 extern crate byteorder;
-
+extern crate bytes;
 use config::*;
 
 use std::net::{TcpListener, Ipv4Addr, SocketAddrV4};

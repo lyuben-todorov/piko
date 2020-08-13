@@ -24,10 +24,10 @@ than `5`, seconds, it is removed from the cluster.
 ### Protocol format 
 A message contains the following:    
 ##### 64-bit header:
-* 16-bit node identifier
+* 32-bit node identifier
 * 16-bit reserved for cloud metrics
-* 32-bit message size `n`
-##### `n`-bit byte-encoded JSON
+* 16-bit message size `n`
+##### `n`-byte encoded JSON
 
 
 
