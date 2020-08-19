@@ -2,7 +2,9 @@ use bit_vec::BitVec;
 use std::ops::Deref;
 use bytes::{BytesMut, BufMut, Bytes, Buf};
 use std::convert::{TryFrom, TryInto};
+use serde::{Serialize, Deserialize};
 
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Header {
     pub id: u32,
     pub size: u16,
@@ -43,20 +45,20 @@ impl TryFrom<Header> for Vec<u8> {
         bytes.put_u16(value.meta);
 
         Ok(bytes.to_vec())
-
     }
 }
 
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Body {
     pub size: u16,
     pub message: String,
 }
 
-impl TryFrom<&[u8]> for Body {
+impl TryFrom<&Vec<u8>> for Body {
     type Error = &'static str;
 
-    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        let mut bytes = BytesMut::from(value);
+    fn try_from(value: &Vec<u8>) -> Result<Self, Self::Error> {
+        let mut bytes = BytesMut::from(value.as_slice());
 
         let declared_size = bytes.get_u16();
 
@@ -78,6 +80,7 @@ impl Body {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Message {
     pub header: Header,
     pub body: Body,

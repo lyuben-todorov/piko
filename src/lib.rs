@@ -1,4 +1,5 @@
 mod tests;
+pub mod msg;
 pub mod proto;
 pub mod net;
 pub mod wrk;
