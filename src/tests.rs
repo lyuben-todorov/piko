@@ -1,44 +1,51 @@
 #[cfg(test)]
 mod tests {
-    use bytes::{Bytes, BytesMut, Buf};
-    use crate::proto::{Header};
-    use std::convert::{TryInto, TryFrom};
+    use bytes::{Bytes, BytesMut};
+    use crate::proto::{Header, Type};
+    use std::convert::{TryFrom};
 
     #[test]
     fn test_decode_header() {
-        let bytes: Vec<u8> = Vec::from([0b11101000u8, 0b10101000u8, 0b00101111u8, 0b11011001u8, 0b01110111u8, 0b01010111u8, 0b01100001u8, 0b01010100u8]);
+        let bytes: Vec<u8> = Vec::from([0b11111111u8, 0b11111111u8, 0b00000000u8, 0b00001000u8, 0b00000000u8, 0b00000000u8, 0b00000000u8, 0b00000001u8]);
         let mut header = Bytes::from(bytes);
 
         //decode
         let serialized_header: Header = Header::try_from(&header.to_vec()).unwrap();
 
-        let id: u32 = 2002215252;
-        let size: u16 = 12249;
-        let meta: u16 = 59560;
 
-        let check_header = Header { id, size, meta };
-
-        assert_eq!(serialized_header.id, check_header.id);
-        assert_eq!(serialized_header.size, check_header.size);
-        assert_eq!(serialized_header.meta, check_header.meta);
+        assert_eq!(serialized_header.id, 65535);
+        assert_eq!(serialized_header.size, 8);
+        assert_eq!(serialized_header.meta, 0);
+        assert_eq!(serialized_header.parcel_type, Type::DSCREQ)
     }
 
     #[test]
     fn test_encode_header() {
-        let bytes: Vec<u8> = Vec::from([0b11101000u8, 0b10101000u8, 0b00101111u8, 0b11011001u8, 0b01110111u8, 0b01010111u8, 0b01100001u8, 0b01010100u8]);
+        let bytes: Vec<u8> = Vec::from([0b11111111u8, 0b11111111u8, 0b00000000u8, 0b00001000u8, 0b00000000u8, 0b00000000u8, 0b00000000u8, 0b00000001u8]);
 
-        let id: u32 = 2002215252;
-        let size: u16 = 12249;
-        let meta: u16 = 59560;
+        let id: u16 = 65535;
+        let size: u16 = 8;
+        let meta: u16 = 0;
+        let parcel_type = Type::DSCREQ;
 
-        let header = Header::new(id, size, meta);
+        let header = Header::new(id, size, meta, parcel_type);
 
-        let mut header = Vec::try_from(header).unwrap();
+        let mut header_encoded = Vec::try_from(header).unwrap();
 
-        let mut encoded_header = BytesMut::from(header.as_slice());
+        assert_eq!(bytes, header_encoded);
+    }
 
-        assert_eq!(id, encoded_header.get_u32());
-        assert_eq!(size, encoded_header.get_u16());
-        assert_eq!(meta, encoded_header.get_u16());
+    #[test]
+    fn test_encode_node() {
+        let header = Header {
+            id: 0,
+            size: 8,
+            meta: 0,
+            parcel_type: Type::DSCREQ,
+        };
+
+        let bytes: Vec<u8> = Vec::try_from(header).unwrap();
+
+        assert_eq!(bytes.len(), 8)
     }
 }

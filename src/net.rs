@@ -33,7 +33,7 @@ impl<'a> DscConnection<'a> {
         // parse response
         let mut res = Vec::<u8>::new();
         self.conn.read_to_end(&mut res);
-        
+
 
 
         // return handshake result
