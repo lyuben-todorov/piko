@@ -13,6 +13,7 @@ pub struct State {
 impl State {
     pub fn new(name: String, mode: Mode, neighbours: HashMap<String, Node>) -> Self {
         let id = Sha256::digest(name.as_bytes()).as_slice().read_u32::<BigEndian>().unwrap();
+
         State { name, mode, id, neighbours, cluster_size: 0 }
     }
 
@@ -29,12 +30,13 @@ impl State {
 pub struct Node {
     pub name: String,
     pub mode: Mode,
+    pub id: u32,
     pub host: String,
 }
 
 impl Node {
-    pub fn new(name: String, mode: Mode, host: String) -> Node {
-        Node { name, mode, host }
+    pub fn new(name: String, mode: Mode, host: String, id: u32) -> Node {
+        Node { name, mode, host, id }
     }
 }
 

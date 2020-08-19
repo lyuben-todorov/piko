@@ -17,6 +17,7 @@ pub fn dsc(state: &mut State, neighbour_list: &[String]) {
             s.spawn(move |_| handshake(&host, immutable_state));
         }
     });
+
     // end parallel scope
 
     state.change_mode(Mode::WRK);
@@ -33,4 +34,5 @@ fn handshake(host: &String, state: Arc<&State>) {
 
     let mut dsc_conn = DscConnection::new(tcp_stream, *state);
 
+    dsc_conn.handshake();
 }
