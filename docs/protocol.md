@@ -22,14 +22,17 @@ A worker is required to send a heartbeat to each (for now) of its neighbours eac
 than `5`, seconds, it is removed from the cluster.
 
 ### Protocol format 
-A message contains the following:    
-##### 64-bit header:
-* 32-bit node identifier
-* 16-bit reserved for metadata
-* 16-bit protocol 'parcel' size - n 
-##### `n`-byte protocol body. This contains protocol data.
-##### The remaining part of a stream is the implementation-specific byte data transported
+Protocol operates under TCP. The protocol wraps the 'message' within a `parcel`. The parcel contains a 64 bit header:     
+```rust
+    pub id: u16
+    pub size: u16,
+    pub meta: u16,
+    pub parcel_type: Type, // u16
+``` 
+The size field indicates how many bytes _after_ the header are still protocol-specific. This is the body of the parcel,
+which contains the 'arguments' for different types of messages our protocol supports.
 
 
+Everything past the parcel body is application-specific.
 
 ##### Types
