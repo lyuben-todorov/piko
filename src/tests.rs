@@ -1,14 +1,16 @@
 #[cfg(test)]
 mod tests {
     use bytes::{Bytes, BytesMut, Buf};
-    use crate::proto::{decode_header, encode_header, Header};
+    use crate::proto::{Header};
+    use std::convert::{TryInto, TryFrom};
 
     #[test]
     fn test_decode_header() {
         let bytes: Vec<u8> = Vec::from([0b11101000u8, 0b10101000u8, 0b00101111u8, 0b11011001u8, 0b01110111u8, 0b01010111u8, 0b01100001u8, 0b01010100u8]);
         let mut header = Bytes::from(bytes);
 
-        let serialized_header = decode_header(&mut header);
+        //decode
+        let serialized_header: Header = Header::try_from(&header.to_vec()).unwrap();
 
         let id: u32 = 2002215252;
         let size: u16 = 12249;
@@ -29,10 +31,14 @@ mod tests {
         let size: u16 = 12249;
         let meta: u16 = 59560;
 
-        let mut header = encode_header(id, size, meta);
+        let header = Header::new(id, size, meta);
 
-        assert_eq!(id, header.get_u32());
-        assert_eq!(size, header.get_u16());
-        assert_eq!(meta, header.get_u16());
+        let mut header = Vec::try_from(header).unwrap();
+
+        let mut encoded_header = BytesMut::from(header.as_slice());
+
+        assert_eq!(id, encoded_header.get_u32());
+        assert_eq!(size, encoded_header.get_u16());
+        assert_eq!(meta, encoded_header.get_u16());
     }
 }

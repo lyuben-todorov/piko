@@ -8,7 +8,7 @@ use std::ops::Deref;
 
 // Start discovery routine
 pub fn dsc(state: &mut State, neighbour_list: &[String]) {
-    let immutable_state: Arc<&State> = Arc::new((state));
+    let immutable_state: Arc<&State> = Arc::new(state);
 
     // begin parallel scope
     rayon::scope(|s| {
