@@ -1,10 +1,7 @@
-use std::sync::{Mutex, Arc};
-use crate::state::{Mode, State, Node};
-use std::collections::HashMap;
+use std::sync::{Arc};
+use crate::state::{Mode, State};
 use crate::net::DscConnection;
 use std::net::TcpStream;
-use crate::state::Mode::DSC;
-use std::ops::Deref;
 
 // Start discovery routine
 pub fn dsc(state: &mut State, neighbour_list: &[String]) {

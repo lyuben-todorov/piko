@@ -2,7 +2,6 @@ use std::collections::{HashMap};
 use sha2::{Sha256, Digest};
 use byteorder::{ReadBytesExt, BigEndian};
 use num_derive::{FromPrimitive, ToPrimitive};
-use num_traits::{FromPrimitive, ToPrimitive};
 use serde::export::TryFrom;
 use bytes::{BytesMut, BufMut, Buf};
 
@@ -65,6 +64,23 @@ impl TryFrom<&Vec<u8>> for Node {
         let id = bytes.get_u16();
 
         Ok(Node { id, mode, name, host })
+    }
+}
+
+impl TryFrom<Node> for Vec<u8> {
+    type Error = &'static str;
+
+    fn try_from(value: Node) -> Result<Self, Self::Error> {
+        let mut bytes = BytesMut::new();
+
+        bytes.put_u16(value.id);
+        bytes.put_u16(num::ToPrimitive::to_u16(&value.mode).unwrap());
+        bytes.put(value.name.as_bytes());
+        bytes.put_u8(value.name.len() as u8);
+        bytes.put(value.host.as_bytes());
+        bytes.put_u8(value.name.len() as u8);
+
+        Ok(bytes.to_vec())
     }
 }
 

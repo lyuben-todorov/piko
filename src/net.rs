@@ -1,10 +1,8 @@
 use std::net::TcpStream;
-use crate::proto::{Body, Header, Type};
+use crate::proto::{Header, Type};
 use crate::state::{State, Node};
 use std::io::{Write, Read};
 use bytes::{BytesMut, Buf};
-use byteorder::ReadBytesExt;
-use std::error::Error;
 use std::convert::TryInto;
 
 // Manages connection between host node and one of its neighbours during DSC phase.
@@ -24,17 +22,18 @@ impl<'a> DscConnection<'a> {
 
         let mut req_bytes = BytesMut::with_capacity(size as usize);
 
-        let encoded_header : Vec<u8> = req_header.try_into().unwrap();
+        let encoded_header: Vec<u8> = req_header.try_into().unwrap();
         req_bytes.extend(encoded_header.as_slice());
 
         // add message here
 
-        self.conn.write(req_bytes.bytes());
+        let write_result = self.conn.write(req_bytes.bytes());
+        println!("Written {} bytes to stream.", write_result.unwrap());
 
         // parse response
         let mut res = Vec::<u8>::new();
         self.conn.read_to_end(&mut res);
-
+        
 
 
         // return handshake result

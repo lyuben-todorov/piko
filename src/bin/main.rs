@@ -6,7 +6,6 @@ extern crate sha2;
 extern crate byteorder;
 extern crate bytes;
 extern crate num;
-#[macro_use]
 extern crate num_derive;
 
 use config::*;
@@ -19,10 +18,7 @@ use piko::state::{Mode, State, Node};
 use std::collections::HashMap;
 use std::env;
 use std::env::current_dir;
-use std::path::{Path, PathBuf};
-use sha2::{Sha256, Digest};
-use sha2::digest::DynDigest;
-use std::ptr::hash;
+use std::path::{ PathBuf};
 use piko::wrk::wrk;
 
 fn main() {

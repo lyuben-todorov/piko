@@ -11,21 +11,16 @@ pub fn wrk(state: &mut State, listener: &TcpListener) {
     }
 
 
-
     // main listener loop
     for stream in listener.incoming() {
         let stream = match stream {
             Ok(stream) => stream,
             Err(err) => {
-                println!("Error unwrapping tcp stream.");
-                continue
+                println!("{}", err);
+                continue;
             }
         };
-
-
     }
 }
 
-fn spawn_heartbeat(){
-
-}
+fn spawn_heartbeat() {}

@@ -1,10 +1,7 @@
-use bit_vec::BitVec;
-use std::ops::Deref;
-use bytes::{BytesMut, BufMut, Bytes, Buf};
-use std::convert::{TryFrom, TryInto};
+use bytes::{BytesMut, BufMut, Buf};
+use std::convert::{TryFrom};
 use std::mem;
 use num_derive::{FromPrimitive, ToPrimitive};
-use num_traits::{FromPrimitive, ToPrimitive};
 use crate::state::Node;
 use crate::proto::Body::DSQREQ;
 
@@ -85,7 +82,6 @@ impl TryFrom<&Vec<u8>> for Body {
 
         match parcel_type {
             Type::DSCREQ => {
-                let size = mem::size_of::<Node>();
                 return Ok(DSQREQ { identity: Node::try_from(&bytes.to_vec()).unwrap() });
             }
             Type::DSCRES => {}
