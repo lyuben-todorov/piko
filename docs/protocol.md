@@ -25,12 +25,11 @@ than `5`, seconds, it is removed from the cluster.
 A message contains the following:    
 ##### 64-bit header:
 * 32-bit node identifier
-* 16-bit reserved for cloud metrics
-* 16-bit message size `n`
-##### `n`-byte encoded JSON
+* 16-bit reserved for metadata
+* 16-bit protocol 'parcel' size - n 
+##### `n`-byte protocol body. This contains protocol data.
+##### The remaining part of a stream is the implementation-specific byte data transported
 
 
 
 ##### Types
-* HEARTBEAT
-

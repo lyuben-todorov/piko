@@ -5,6 +5,10 @@ extern crate bit_vec;
 extern crate sha2;
 extern crate byteorder;
 extern crate bytes;
+extern crate num;
+#[macro_use]
+extern crate num_derive;
+
 use config::*;
 
 use std::net::{TcpListener, Ipv4Addr, SocketAddrV4};

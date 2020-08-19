@@ -1,5 +1,5 @@
 use std::net::TcpStream;
-use crate::proto::{Body, Header};
+use crate::proto::{Body, Header, Type};
 use crate::state::{State, Node};
 use std::io::{Write, Read};
 use bytes::{BytesMut, Buf};
@@ -20,7 +20,7 @@ impl<'a> DscConnection<'a> {
 
     pub fn handshake(&mut self) -> Result<Node, &'static str> {
         let size: u16 = 8;
-        let req_header = Header::new(self.node_state.id, size, 0);
+        let req_header = Header::new(self.node_state.id, size, 0, Type::DSCREQ);
 
         let mut req_bytes = BytesMut::with_capacity(size as usize);
 

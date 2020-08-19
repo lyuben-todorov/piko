@@ -1,18 +1,31 @@
 use std::collections::{HashMap};
 use sha2::{Sha256, Digest};
 use byteorder::{ReadBytesExt, BigEndian};
+use num_derive::{FromPrimitive, ToPrimitive};
+use num_traits::{FromPrimitive, ToPrimitive};
+use serde::export::TryFrom;
+use bytes::{BytesMut, BufMut, Buf};
+
+#[derive(FromPrimitive, ToPrimitive)]
+pub enum Mode {
+    WRK = 1,
+    DSC = 2,
+    ERR = 3,
+    PANIC = 4,
+    SHUTDOWN = 5,
+}
 
 pub struct State {
     pub name: String,
     pub mode: Mode,
-    pub id: u32,
+    pub id: u16,
     pub neighbours: HashMap<String, Node>,
     pub cluster_size: usize,
 }
 
 impl State {
     pub fn new(name: String, mode: Mode, neighbours: HashMap<String, Node>) -> Self {
-        let id = Sha256::digest(name.as_bytes()).as_slice().read_u32::<BigEndian>().unwrap();
+        let id = Sha256::digest(name.as_bytes()).as_slice().read_u16::<BigEndian>().unwrap();
 
         State { name, mode, id, neighbours, cluster_size: 0 }
     }
@@ -28,33 +41,36 @@ impl State {
 }
 
 pub struct Node {
-    pub name: String,
+    pub id: u16,
     pub mode: Mode,
-    pub id: u32,
+    //u16
+    pub name: String,
     pub host: String,
 }
 
+impl TryFrom<&Vec<u8>> for Node {
+    type Error = &'static str;
+
+    fn try_from(value: &Vec<u8>) -> Result<Self, Self::Error> {
+        let mut bytes = BytesMut::from(value.as_slice());
+
+        let host_size = bytes.get_u8();
+        let host = String::from_utf8(bytes.split_to(host_size as usize).to_vec()).unwrap();
+        let name_size = bytes.get_u8();
+        let name = String::from_utf8(bytes.split_to(name_size as usize).to_vec()).unwrap();
+        let mode: Mode = match num::FromPrimitive::from_u16(bytes.get_u16()) {
+            Some(mode) => mode,
+            None => return Err("Mismatching parcel type!")
+        };
+        let id = bytes.get_u16();
+
+        Ok(Node { id, mode, name, host })
+    }
+}
+
 impl Node {
-    pub fn new(name: String, mode: Mode, host: String, id: u32) -> Node {
+    pub fn new(name: String, mode: Mode, host: String, id: u16) -> Node {
         Node { name, mode, host, id }
     }
 }
 
-#[derive(Clone, Copy)]
-pub enum Mode {
-    WRK,
-    DSC,
-    ERR,
-    PANIC,
-    SHUTDOWN,
-}
-
-pub fn state_to_str(state: &Mode) -> &'static str {
-    match state {
-        Mode::WRK => "WRK",
-        Mode::DSC => "DSC",
-        Mode::ERR => "ERR",
-        Mode::PANIC => "PANIC",
-        Mode::SHUTDOWN => "SHUTDOWN"
-    }
-}
