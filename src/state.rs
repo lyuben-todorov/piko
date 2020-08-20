@@ -4,6 +4,7 @@ use byteorder::{ReadBytesExt, BigEndian};
 use num_derive::{FromPrimitive, ToPrimitive};
 use serde::export::TryFrom;
 use bytes::{BytesMut, BufMut, Buf};
+use num_traits::{FromPrimitive, ToPrimitive};
 
 #[derive(FromPrimitive, ToPrimitive)]
 pub enum Mode {
@@ -15,18 +16,16 @@ pub enum Mode {
 }
 
 pub struct State {
-    pub name: String,
-    pub mode: Mode,
-    pub id: u16,
+    pub self_node: Node,
     pub neighbours: HashMap<String, Node>,
     pub cluster_size: usize,
 }
 
 impl State {
-    pub fn new(name: String, mode: Mode, neighbours: HashMap<String, Node>) -> Self {
-        let id = Sha256::digest(name.as_bytes()).as_slice().read_u16::<BigEndian>().unwrap();
+    pub fn new(self_node: Node, neighbours: HashMap<String, Node>) -> Self {
+        let id = Sha256::digest(self_node.name.as_bytes()).as_slice().read_u16::<BigEndian>().unwrap();
 
-        State { name, mode, id, neighbours, cluster_size: 0 }
+        State { self_node, neighbours, cluster_size: 0 }
     }
 
     pub fn add_neighbour(&mut self, name: &str, node: Node) {
@@ -35,14 +34,13 @@ impl State {
     }
 
     pub fn change_mode(&mut self, mode: Mode) {
-        self.mode = mode;
+        self.self_node.mode = mode;
     }
 }
 
 pub struct Node {
     pub id: u16,
-    pub mode: Mode,
-    //u16
+    pub mode: Mode, //u16
     pub name: String,
     pub host: String,
 }
@@ -67,10 +65,10 @@ impl TryFrom<&Vec<u8>> for Node {
     }
 }
 
-impl TryFrom<Node> for Vec<u8> {
+impl TryFrom<&Node> for Vec<u8> {
     type Error = &'static str;
 
-    fn try_from(value: Node) -> Result<Self, Self::Error> {
+    fn try_from(value: &Node) -> Result<Self, Self::Error> {
         let mut bytes = BytesMut::new();
 
         bytes.put_u16(value.id);

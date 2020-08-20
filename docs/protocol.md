@@ -35,4 +35,20 @@ which contains the 'arguments' for different types of messages our protocol supp
 
 Everything past the parcel body is application-specific.
 
-##### Types
+## Types
+### DSCREQ
+
+#### Parcel contains:
+* 8-byte header
+* n-byte body
+    *  u16 - byte size of node `m`
+    *  `m` bytes - serialize to `Node`)
+#### Expected:
+`DSCRES`
+
+##### DSCRES
+* 8-byte header
+* n-byte body (serializes to _multiple_ `Node`)
+    *  u16 - number of nodes in message
+    *  u16 - byte size of next node `m`
+    *  `m` bytes - serialize to `Node`

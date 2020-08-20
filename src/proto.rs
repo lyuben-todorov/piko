@@ -79,7 +79,10 @@ impl TryFrom<Header> for Vec<u8> {
 
 pub enum Body {
     DSQREQ { identity: Node },
-    DSQRES { neighbours: Vec<Node> },
+    DSQRES {
+        size: u16,
+        neighbours: Vec<Node>,
+    },
 }
 
 impl TryFrom<&Vec<u8>> for Body {
