@@ -18,7 +18,7 @@ use piko::state::{Mode, State, Node};
 use std::collections::HashMap;
 use std::env;
 use std::env::current_dir;
-use std::path::{ PathBuf};
+use std::path::{PathBuf};
 use piko::wrk::wrk;
 
 fn main() {
@@ -83,20 +83,22 @@ fn main() {
     };
 
     let neighbours = HashMap::<String, Node>::new();
-    let mut state: State = State::new(name, Mode::DSC, neighbours);
+    let self_node = Node::new(name, Mode::DSC, host_name);
+    let mut state: State = State::new(self_node, neighbours);
 
-    println!("Node {} initialized", state.name);
+    println!("Node {} initialized", state.self_node.name);
     println!("Starting main worker process.");
 
     loop {
         println!("Loop");
 
-        match &state.mode {
+        match &state.self_node.mode {
             Mode::DSC => {
-                dsc(&mut state, &neighbour_host_names);
-                continue;
+                dsc(&mut state, &);
             }
-            Mode::WRK => { wrk(&mut state, &listener) }
+            Mode::WRK => {
+                wrk(&mut state, &listener);
+            }
             Mode::ERR => {}
             Mode::PANIC => {}
             Mode::SHUTDOWN => {

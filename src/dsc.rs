@@ -4,7 +4,7 @@ use crate::net::DscConnection;
 use std::net::TcpStream;
 
 // Start discovery routine
-pub fn dsc(state: &mut State, neighbour_list: &[String]) {
+pub fn dsc(state: &mut State, neighbour_list: &Vec<String>) {
     let immutable_state: Arc<&State> = Arc::new(state);
 
     // begin parallel scope
@@ -31,5 +31,5 @@ fn handshake(host: &String, state: Arc<&State>) {
 
     let mut dsc_conn = DscConnection::new(tcp_stream, *state);
 
-    dsc_conn.handshake();
+    let Node = dsc_conn.handshake();
 }

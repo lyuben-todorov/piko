@@ -18,18 +18,20 @@ impl<'a> DscConnection<'a> {
     }
 
     pub fn handshake(&mut self) -> Result<Node, String> {
-        let size: u16 = 8;
+        let size: u16 = 0;
 
-        let req_header = Header::new(self.node_state.self_node.id, size, 0, Type::DSCREQ);
+        let mut req_header = Header::new(self.node_state.self_node.id, size, 0, Type::DSCREQ);
+
+        let encoded_header: Vec<u8> = bincode::serialize(&req_header).unwrap();
+        let encoded_body: Vec<u8> = bincode::serialize(&self.node_state.self_node).unwrap();
 
         let mut req_bytes = BytesMut::with_capacity(size as usize);
 
-        let encoded_header: Vec<u8> = req_header.try_into().unwrap();
-        req_bytes.extend(encoded_header.as_slice());
+        //
+        req_bytes.extend_from_slice(encoded_header.as_slice());
+        req_bytes.extend_from_slice(encoded_body.as_slice());
 
         // add message here
-
-        let encoded_node = Vec::try_from(&self.node_state.self_node);
 
         let write_result = self.conn.write(req_bytes.bytes());
         println!("Written {} bytes to stream.", write_result.unwrap());
@@ -38,19 +40,17 @@ impl<'a> DscConnection<'a> {
         let mut res = Vec::<u8>::new();
 
         let res_size = self.conn.read_to_end(&mut res);
+
         let mut res = BytesMut::from(res.as_slice());
 
         let header = res.split_to(8).to_vec();
-        let header: Header = Header::try_from(&header)?;
-
+        let header: Header = bincode::deserialize(&header).unwrap();
+        if header.parcel_type != Type::DSCRES {
+            return Err(format!("Expected DSCRES, found {}", header.parcel_type));
+        }
         let node_byte_size = res.get_u16();
         let node = res.split_to(node_byte_size as usize);
-        let node = Node::try_from(&node.to_vec()).unwrap();
-
-        if header.parcel_type == Type::DSCRES {
-            Ok(node)
-        } else {
-            Err(format!("Expected DSCRES, found {}", header.parcel_type))
-        }
+        let node = bincode::deserialize(&node.to_vec().as_slice()).unwrap();
+        Ok(node)
     }
 }
