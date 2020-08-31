@@ -10,14 +10,15 @@ pub fn dsc(state: Arc<RwLock<State>>, neighbour_list: &Vec<String>) {
     // begin parallel scope
     rayon::scope(|s| {
         for host in neighbour_list {
-            s.spawn(move |_| discover(&host, state.clone()));
+            let state = state.clone();
+            s.spawn(move |_| discover(&host, state));
         }
     });
 
     // end parallel scope
 
-    let mut state = state.lock().unwrap();
 
+    let mut state = state.write().unwrap();
     for node in state.neighbours.values() {
         println!("{}", node.name);
     }
@@ -31,8 +32,11 @@ fn discover(host: &String, state: Arc<RwLock<State>>) {
     println!("{}", host);
     let mut tcp_stream = TcpStream::connect(host).unwrap();
 
-    let req = ProtoParcel::dsq_req(&state.read().unwrap().self_node);
-    let buffer = serde_cbor::to_vec(&req).unwrap().as_slice();
+    let state = &state.read().unwrap();
+    let req = ProtoParcel::dsq_req(&state.self_node);
+
+    let buffer = serde_cbor::to_vec(&req).unwrap();
+    let buffer = buffer.as_slice();
 
     tcp_stream.write(buffer);
 
@@ -41,7 +45,7 @@ fn discover(host: &String, state: Arc<RwLock<State>>) {
 
     let res: ProtoParcel = serde_cbor::from_slice(res.as_slice()).unwrap();
     match res.parcel_type {
-
+        _ => {}
     }
 }
 

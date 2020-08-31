@@ -20,7 +20,7 @@ use std::env;
 use std::env::current_dir;
 use std::path::{PathBuf};
 use piko::wrk::wrk;
-use piko::net::net_thread;
+use piko::net::listener_thread;
 use std::sync::{Arc, Mutex, mpsc, RwLock};
 use std::sync::mpsc::{Sender, Receiver};
 
@@ -94,11 +94,11 @@ fn main() {
     let (state_sender, listener_receiver): (Sender<u32>, Receiver<u32>) = mpsc::channel();
     let (listener_sender, state_receiver): (Sender<u32>, Receiver<u32>) = mpsc::channel();
 
-    let mut state = Arc::new(RwLock::new(State::new(self_node, neighbours, state_sender, state_receiver))); // pass sender to state
+    let mut state = Arc::new(RwLock::new(State::new(self_node, neighbours))); // pass sender to state
 
-    rayon::spawn(move || net_thread(rx, state.clone(), listener));
+    rayon::spawn(move || listener_thread(listener_receiver, listener_sender, state.clone(), listener));
     // pass receiver to listener thread
-    pritnln!("Started Listener thread!");
+    println!("Started Listener thread!");
 
     println!("Node {} initialized", state.self_node.name);
     println!("Starting main worker process.");

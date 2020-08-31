@@ -7,7 +7,7 @@ use bytes::{BytesMut, BufMut, Buf};
 use serde::{Serialize, Deserialize};
 use std::sync::mpsc::{Sender, Receiver};
 
-#[derive(FromPrimitive, ToPrimitive, Deserialize, Serialize)]
+#[derive(FromPrimitive, ToPrimitive, Deserialize, Serialize, Clone)]
 pub enum Mode {
     WRK = 1,
     DSC = 2,
@@ -20,13 +20,12 @@ pub struct State {
     pub self_node: Node,
     pub neighbours: HashMap<String, Node>,
     pub cluster_size: usize,
-    pub tx: Sender<u32>,
-    pub rx: Receiver<u32>,
+
 }
 
 impl State {
-    pub fn new(self_node: Node, neighbours: HashMap<String, Node>, tx: Sender<u32>, rx: Receiver<u32>) -> Self {
-        State { self_node, neighbours, cluster_size: 0, tx, rx }
+    pub fn new(self_node: Node, neighbours: HashMap<String, Node>) -> Self {
+        State { self_node, neighbours, cluster_size: 0 }
     }
 
     pub fn add_neighbour(&mut self, name: &str, node: Node) {

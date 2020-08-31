@@ -6,6 +6,6 @@ use bytes::{BytesMut, Buf};
 use std::convert::{TryInto, TryFrom};
 use bytes::buf::BufExt;
 use std::sync::mpsc::{Receiver, Sender};
-use std::sync::{Mutex, Arc};
+use std::sync::{Arc, RwLock};
 
-pub fn listener_thread(rx: Receiver<u32>, tx: Sender<u32>, state: Arc<Mutex<State>>, socket: TcpListener) {}
+pub fn listener_thread(rx: Receiver<u32>, tx: Sender<u32>, state: Arc<RwLock<State>>, socket: TcpListener) {}
