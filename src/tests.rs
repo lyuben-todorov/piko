@@ -6,7 +6,7 @@ mod tests {
 
     #[test]
     fn test_decode_header() {
-        let mut header = Header { id: 65535, size: 0, meta: 0, parcel_type: Type::DSCREQ };
+        let mut header = Header { id: 65535, size: 0, meta: 0, parcel_type: Type::DscReq };
 
         let mut encoded_header = bincode::serialize(&header).unwrap();
         //decode
@@ -16,7 +16,7 @@ mod tests {
         assert_eq!(serialized_header.id, 65535);
         assert_eq!(serialized_header.size, 0);
         assert_eq!(serialized_header.meta, 0);
-        assert_eq!(serialized_header.parcel_type, Type::DSCREQ)
+        assert_eq!(serialized_header.parcel_type, Type::DscReq)
     }
 
 
@@ -26,7 +26,7 @@ mod tests {
             id: 0,
             size: 8,
             meta: 0,
-            parcel_type: Type::DSCREQ,
+            parcel_type: Type::DscReq,
         };
 
         let bytes: Vec<u8> = bincode::serialize(&header).unwrap();

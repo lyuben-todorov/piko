@@ -6,6 +6,7 @@ use serde::export::TryFrom;
 use bytes::{BytesMut, BufMut, Buf};
 use num_traits::{FromPrimitive, ToPrimitive};
 use serde::{Serialize, Deserialize};
+use std::sync::mpsc::Sender;
 
 #[derive(FromPrimitive, ToPrimitive, Deserialize, Serialize)]
 pub enum Mode {
@@ -20,11 +21,13 @@ pub struct State {
     pub self_node: Node,
     pub neighbours: HashMap<String, Node>,
     pub cluster_size: usize,
+    pub tx: Sender<u32>
+
 }
 
 impl State {
-    pub fn new(self_node: Node, neighbours: HashMap<String, Node>) -> Self {
-        State { self_node, neighbours, cluster_size: 0 }
+    pub fn new(self_node: Node, neighbours: HashMap<String, Node>, tx: Sender<u32>) -> Self {
+        State { self_node, neighbours, cluster_size: 0, tx }
     }
 
     pub fn add_neighbour(&mut self, name: &str, node: Node) {
@@ -41,7 +44,6 @@ impl State {
 pub struct Node {
     pub id: u16,
     pub mode: Mode,
-    //u16
     pub name: String,
     pub host: String,
 }

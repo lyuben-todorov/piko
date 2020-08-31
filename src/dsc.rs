@@ -1,35 +1,32 @@
-use std::sync::{Arc};
+use std::sync::{Arc, Mutex};
 use crate::state::{Mode, State};
-use crate::net::DscConnection;
+use crate::net::handshake;
 use std::net::TcpStream;
+use std::alloc::System;
 
 // Start discovery routine
-pub fn dsc(state: &mut State, neighbour_list: &Vec<String>) {
-    let immutable_state: Arc<&State> = Arc::new(state);
-
+pub fn dsc(state: Arc<Mutex<State>>, neighbour_list: &Vec<String>) {
     // begin parallel scope
     rayon::scope(|s| {
         for host in neighbour_list {
-            let immutable_state = immutable_state.clone();
-            s.spawn(move |_| handshake(&host, immutable_state));
+            let state = state.clone();
+            s.spawn(move |_| discover(&host, state));
         }
     });
 
     // end parallel scope
 
+    let mut state = state.lock().unwrap();
+
+    for node in state.neighbours.values() {
+        println!("{}", node.name);
+    }
+
     state.change_mode(Mode::WRK);
 }
 
-fn handshake(host: &String, state: Arc<&State>) {
+fn discover(host: &String, state: Arc<Mutex<State>>) {
     println!("{}", host);
-    let tcp_stream = match TcpStream::connect(host) {
-        Ok(res) => res,
-        Err(e) => {
-            return;
-        }
-    };
-
-    let mut dsc_conn = DscConnection::new(tcp_stream, *state);
-
-    let Node = dsc_conn.handshake();
+    let tcp_stream = TcpStream::connect(host)?;
+    let node = handshake(host, &state.clone().self_node).unwrap();
 }

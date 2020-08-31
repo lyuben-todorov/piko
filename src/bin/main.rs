@@ -20,6 +20,9 @@ use std::env;
 use std::env::current_dir;
 use std::path::{PathBuf};
 use piko::wrk::wrk;
+use piko::net::net_thread;
+use std::sync::{Arc, Mutex, mpsc};
+use std::sync::mpsc::{Sender, Receiver};
 
 fn main() {
     let mut settings = Config::default();
@@ -82,22 +85,30 @@ fn main() {
         Err(error) => panic!("Error during port binding: {}", error),
     };
 
+
     let neighbours = HashMap::<String, Node>::new();
     let self_node = Node::new(name, Mode::DSC, host_name);
-    let mut state: State = State::new(self_node, neighbours);
+
+
+    let (tx, rx): (Sender<u32>, Receiver<u32>) = mpsc::channel();
+
+
+    let mut state = Arc::new(Mutex::new(State::new(self_node, neighbours, tx))); // pass sender to state
+
+    rayon::spawn(move || net_thread(rx, state.clone(), listener)); // pass receiver to listener thread
+    pritnln!("Started Listener thread!");
 
     println!("Node {} initialized", state.self_node.name);
     println!("Starting main worker process.");
 
     loop {
-        println!("Loop");
-
+        println!("Loop!");
         match &state.self_node.mode {
             Mode::DSC => {
-                dsc(&mut state, &);
+                dsc(state.clone(), &neighbour_host_names);
             }
             Mode::WRK => {
-                wrk(&mut state, &listener);
+                wrk(state.clone());
             }
             Mode::ERR => {}
             Mode::PANIC => {}
