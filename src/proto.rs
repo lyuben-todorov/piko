@@ -1,5 +1,3 @@
-
-
 use std::{fmt};
 use num_derive::{FromPrimitive, ToPrimitive};
 use crate::state::Node;
@@ -53,8 +51,7 @@ pub enum Body {
 
 
 #[derive(Serialize, Deserialize)]
-pub struct ProtoParcel<'a> {
-    pub proto_version: &'a str,
+pub struct ProtoParcel {
     pub is_response: bool,
     // whether or not packet is a response
     pub parcel_type: Type,
@@ -66,9 +63,9 @@ pub struct ProtoParcel<'a> {
     pub body: Body,
 }
 
-impl<'a> ProtoParcel<'a> {
+impl ProtoParcel {
     pub fn dsq_req(self_node_information: &Node) -> ProtoParcel {
         let node: Node = self_node_information.clone();
-        ProtoParcel { proto_version: PROTO_VERSION, is_response: false, parcel_type: Type::DscReq, id: self_node_information.id, size: 0, body: Body::DscReq { identity: node } }
+        ProtoParcel { is_response: false, parcel_type: Type::DscReq, id: self_node_information.id, size: 0, body: Body::DscReq { identity: node } }
     }
 }

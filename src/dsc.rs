@@ -7,6 +7,7 @@ use std::io::{Write, Read};
 use std::sync::mpsc::{Sender, Receiver};
 use std::collections::HashSet;
 use rayon::prelude::*;
+use byteorder::{WriteBytesExt, BigEndian};
 
 // Start discovery routine
 pub fn dsc(state: Arc<RwLock<State>>, neighbour_list: &Vec<SocketAddr>) {
@@ -61,20 +62,22 @@ fn discover(host: &SocketAddr, state_ref: Arc<RwLock<State>>, tx: &mut Sender<Ve
     };
 
     let state = state_ref.read().unwrap();
-    let req = ProtoParcel::dsq_req(&state.self_node_information);
 
+    let req = ProtoParcel::dsq_req(&state.self_node_information);
     let buffer = serde_cbor::to_vec(&req).unwrap();
     let buffer = buffer.as_slice();
 
     println!("Buffer size is {} ", buffer.len());
 
+    tcp_stream.write_u8(buffer.len() as u8);
+
     let count = tcp_stream.write(buffer).unwrap();
 
     println!("Written {} bytes", count);
-    
+
     let mut res: Vec<u8> = Vec::new();
 
-    tcp_stream.read_to_end(&mut res);
+    tcp_stream.read(&mut res);
 
     let res: ProtoParcel = serde_cbor::from_slice(res.as_slice()).unwrap();
     match res.parcel_type {
