@@ -6,4 +6,4 @@ thread_count = 4
 
 [cluster]
 name = "Bramchalka"
-neighbours = []
+neighbours = ["127.0.0.2"]

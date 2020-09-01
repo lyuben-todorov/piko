@@ -63,13 +63,19 @@ fn main() {
         .get_int("node.thread_count")
         .expect("Missing node thread_count.");
 
-    let neighbour_host_names_settings = settings
+    let neighbour_host_names = settings
         .get_array("cluster.neighbours")
         .expect("Missing cluster settings.");
-    let mut neighbour_host_names = Vec::new();
-    for result in neighbour_host_names_settings {
-        neighbour_host_names.push(result.into_str().expect("Error parsing cluster node entry."));
+    let mut neighbour_socket_addresses: Vec<SocketAddr> = Vec::new();
+    for result in neighbour_host_names {
+        let neighbour_host_name = result.into_str().expect("Error parsing cluster node entry.");
+        let socket = SocketAddr::from(
+            SocketAddrV4::new(
+                Ipv4Addr::from_str(&neighbour_host_name).expect("Error parsing neighbour host name"),
+                port as u16));
+        neighbour_socket_addresses.push(socket);
     }
+
 
     rayon::ThreadPoolBuilder::new().num_threads(thread_count as usize).build_global().unwrap();
     println!("Setting worker pool count to {}.", thread_count);
@@ -110,10 +116,9 @@ fn main() {
         let mode = &state.read().unwrap().self_node_information.mode;
         match mode {
             Mode::DSC => {
-                dsc(state.clone(), &neighbour_host_names);
+                dsc(state.clone(), &neighbour_socket_addresses);
             }
-            Mode::WRK => {
-            }
+            Mode::WRK => {}
             Mode::ERR => {}
             Mode::PANIC => {}
             Mode::SHUTDOWN => {

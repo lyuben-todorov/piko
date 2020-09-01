@@ -17,8 +17,7 @@ pub enum Type {
     DscRes = 2,
     SeqReq = 3,
     SeqRes = 4,
-
-    Err = 5,
+    ProtoError = 5,
 }
 
 // Enumeration over the types of protocol errors.
