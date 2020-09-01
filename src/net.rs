@@ -11,14 +11,18 @@ pub fn listener_thread(rx: Receiver<u32>, tx: Sender<u32>, state: Arc<RwLock<Sta
     println!("Started Listener thread!");
 
     for stream in socket.incoming() {
-        println!("ping");
+
         let mut stream = stream.unwrap();
+        println!("{}", stream.peer_addr().unwrap());
+
         let mut bytes: Vec<u8> = Vec::new();
-        stream.read_to_end(&mut bytes);
+        println!("bytes are{}", String::from_utf8_lossy(bytes.as_slice()));
+
+        let count = stream.read_to_end(&mut bytes).unwrap();
+        println!("count is {}", count);
 
         let parcel: ProtoParcel = serde_cbor::from_slice(bytes.as_slice()).unwrap();
 
-        println!("{}", parcel.id);
 
     }
 }

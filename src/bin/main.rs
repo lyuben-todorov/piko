@@ -32,12 +32,9 @@ fn main() {
 
     let mut config_path = current_dir().expect("Couldn't get working directory");
 
-    println!("{}", argv.len());
     if argv.len() > 1 {
         let arg1 = argv.get(1).unwrap();
         let arg2 = argv.get(2).unwrap();
-
-        println!("{}  {}", arg1, arg2);
 
         if arg1 == "-p" {
             config_path = PathBuf::from(arg2);
@@ -46,7 +43,6 @@ fn main() {
         config_path.push("conf/prtkl.toml");
     }
 
-    println!("{}", config_path.to_str().unwrap());
     settings.merge(File::from(config_path)).expect("Couldn't open config file!");
 
     let name = settings
@@ -86,7 +82,7 @@ fn main() {
     let listener = TcpListener::bind(address);
     let listener = match listener {
         Ok(listener) => {
-            println!("Bound to socket {}.", address.to_string());
+            println!("Bound to socket {}.", listener.local_addr().unwrap());
             listener
         }
         Err(error) => panic!("Error during port binding: {}", error),
