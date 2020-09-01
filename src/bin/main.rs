@@ -106,7 +106,6 @@ fn main() {
     let state_ref = state.clone();
     rayon::spawn(move || listener_thread(listener_receiver, listener_sender, state_ref, listener));
     // pass receiver to listener thread
-    println!("Started Listener thread!");
 
     println!("Node {} initialized", state.read().unwrap().self_node_information.name);
     println!("Starting main worker process.");
