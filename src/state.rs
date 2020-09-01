@@ -8,6 +8,7 @@ use serde::{Serialize, Deserialize};
 use std::hash::{Hash, Hasher};
 use std::fmt::Display;
 use serde::export::Formatter;
+use std::fmt;
 
 
 #[derive(FromPrimitive, ToPrimitive, Deserialize, Serialize, Clone)]
@@ -20,8 +21,15 @@ pub enum Mode {
 }
 
 impl Display for Mode {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        unimplemented!()
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Mode::WRK => write!(f, "{}", "Wrk"),
+            Mode::DSC => write!(f, "{}", "Dsc"),
+            Mode::ERR => write!(f, "{}", "Err"),
+            Mode::PANIC => write!(f, "{}", "Panic"),
+            Mode::SHUTDOWN => write!(f, "{}", "Shutdown"),
+
+        }
     }
 }
 pub struct State {

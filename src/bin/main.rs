@@ -91,29 +91,31 @@ fn main() {
     let self_node_information = Node::new(name, Mode::DSC, host_name);
 
 
-    let (_state_sender, listener_receiver): (Sender<u32>, Receiver<u32>) = mpsc::channel();
-    let (listener_sender, _state_receiver): (Sender<u32>, Receiver<u32>) = mpsc::channel();
+    let (state_sender, listener_receiver): (Sender<u32>, Receiver<u32>) = mpsc::channel();
 
     let state_inner = State::new(self_node_information, neighbours);
     let state = Arc::new(RwLock::new(state_inner)); // pass sender to state
 
     let state_ref = state.clone();
-    rayon::spawn(move || listener_thread(listener_receiver, listener_sender, state_ref, listener));
+    rayon::spawn(move || listener_thread(listener_receiver, state_ref, listener));
     // pass receiver to listener thread
 
     println!("Node {} initialized", state.read().unwrap().self_node_information.name);
     println!("Starting main worker process.");
 
     loop {
-        let mode = &state.read().unwrap().self_node_information.mode;
-
+        let state_lock = state.read().unwrap();
+        let mode = &state_lock.self_node_information.mode;
         println!("Mode: {}", mode);
         match mode {
+
             Mode::DSC => {
+                drop(state_lock);
                 dsc(state.clone(), &neighbour_socket_addresses);
             }
             Mode::WRK => {
-                wrk(state.clone());
+                drop(state_lock);
+                wrk(state.clone(), state_sender.clone());
             }
             Mode::ERR => {}
             Mode::PANIC => {}

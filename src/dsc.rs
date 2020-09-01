@@ -14,6 +14,17 @@ pub fn dsc(state: Arc<RwLock<State>>, neighbour_list: &Vec<SocketAddr>) {
     // begin parallel scope
     let (sender, receiver): (Sender<Vec<Node>>, Receiver<Vec<Node>>) = mpsc::channel();
 
+    println!("Attempting to connect to {} hosts", neighbour_list.len());
+
+    // Skip discovery
+    if neighbour_list.len() == 0 {
+        let mut state = state.write().unwrap();
+        state.change_mode(Mode::WRK);
+        println!("bye");
+        return
+    }else {
+    }
+
     let neighbour_list = neighbour_list.as_slice();
     neighbour_list.into_par_iter().for_each_with(sender, |s, addr| {
         let state_ref = state.clone();
@@ -22,16 +33,20 @@ pub fn dsc(state: Arc<RwLock<State>>, neighbour_list: &Vec<SocketAddr>) {
 
     // end parallel scope
 
+
     let mut neighbours: HashSet<Node> = HashSet::new();
 
     for nodes in receiver.iter() {
         neighbours.extend(nodes);
     }
 
-    for node in neighbours {
+    for node in &neighbours {
         println!("{}", node.name)
     }
-    state.write().unwrap().change_mode(Mode::WRK);
+
+    let mut state = state.write().unwrap();
+    state.change_mode(Mode::WRK);
+    state.cluster_size = neighbours.len();
 }
 
 // Request/response on same tcp stream
