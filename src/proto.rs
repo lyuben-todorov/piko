@@ -68,8 +68,8 @@ pub struct ProtoParcel<'a> {
 }
 
 impl<'a> ProtoParcel<'a> {
-    pub fn dsq_req(self_node: &Node) -> ProtoParcel {
-        let node: Node = self_node.clone();
-        ProtoParcel { proto_version: PROTO_VERSION, is_response: false, parcel_type: Type::DscReq, id: self_node.id, size: 0, body: Body::DscReq { identity: node } }
+    pub fn dsq_req(self_node_information: &Node) -> ProtoParcel {
+        let node: Node = self_node_information.clone();
+        ProtoParcel { proto_version: PROTO_VERSION, is_response: false, parcel_type: Type::DscReq, id: self_node_information.id, size: 0, body: Body::DscReq { identity: node } }
     }
 }

@@ -1,39 +1,48 @@
-use std::sync::{Arc, RwLock};
-use crate::state::{Mode, State};
+use std::sync::{Arc, RwLock, mpsc};
+use crate::state::{Mode, State, Node};
 use std::net::TcpStream;
 
 use crate::proto::ProtoParcel;
 use std::io::{Write, Read};
+use std::sync::mpsc::{Sender, Receiver};
+use std::collections::HashSet;
+use rayon::prelude::*;
 
 // Start discovery routine
 pub fn dsc(state: Arc<RwLock<State>>, neighbour_list: &Vec<String>) {
+
     // begin parallel scope
-    rayon::scope(|s| {
-        for host in neighbour_list {
-            let state = state.clone();
-            s.spawn(move |_| discover(&host, state));
-        }
-    });
+    let (sender, receiver): (Sender<Vec<Node>>, Receiver<Vec<Node>>) = mpsc::channel();
+
+    let neighbour_list = neighbour_list.as_slice();
+    neighbour_list.into_par_iter().for_each_with(sender, |s, host| {
+            let state_ref = state.clone();
+            discover(&host, state_ref, s);
+        });
 
     // end parallel scope
 
+    let mut neighbours: HashSet<Node> = HashSet::new();
 
-    let mut state = state.write().unwrap();
-    for node in state.neighbours.values() {
-        println!("{}", node.name);
+    for nodes in receiver.iter() {
+        neighbours.extend(nodes);
     }
 
-    state.change_mode(Mode::WRK);
+    for node in neighbours {
+        println!("{}", node.name)
+    }
+    state.write().unwrap().change_mode(Mode::WRK);
 }
 
 // Request/response on same tcp stream
 // Writes result to state after acquiring write lock
-fn discover(host: &String, state: Arc<RwLock<State>>) {
+
+fn discover(host: &String, state_ref: Arc<RwLock<State>>, tx: &mut Sender<Vec<Node>>) {
     println!("{}", host);
     let mut tcp_stream = TcpStream::connect(host).unwrap();
 
-    let state = &state.read().unwrap();
-    let req = ProtoParcel::dsq_req(&state.self_node);
+    let state = state_ref.read().unwrap();
+    let req = ProtoParcel::dsq_req(&state.self_node_information);
 
     let buffer = serde_cbor::to_vec(&req).unwrap();
     let buffer = buffer.as_slice();

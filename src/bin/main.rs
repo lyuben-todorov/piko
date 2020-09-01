@@ -88,29 +88,31 @@ fn main() {
 
 
     let neighbours = HashMap::<String, Node>::new();
-    let self_node = Node::new(name, Mode::DSC, host_name);
+    let self_node_information = Node::new(name, Mode::DSC, host_name);
 
 
     let (state_sender, listener_receiver): (Sender<u32>, Receiver<u32>) = mpsc::channel();
     let (listener_sender, state_receiver): (Sender<u32>, Receiver<u32>) = mpsc::channel();
 
-    let mut state = Arc::new(RwLock::new(State::new(self_node, neighbours))); // pass sender to state
+    let mut state_inner = State::new(self_node_information, neighbours);
+    let mut state = Arc::new(RwLock::new(state_inner)); // pass sender to state
 
-    rayon::spawn(move || listener_thread(listener_receiver, listener_sender, state.clone(), listener));
+    let state_ref = state.clone();
+    rayon::spawn(move || listener_thread(listener_receiver, listener_sender, state_ref, listener));
     // pass receiver to listener thread
     println!("Started Listener thread!");
 
-    println!("Node {} initialized", state.self_node.name);
+    println!("Node {} initialized", state.read().unwrap().self_node_information.name);
     println!("Starting main worker process.");
 
     loop {
         println!("Loop!");
-        match &state.self_node.mode {
+        let mode = &state.read().unwrap().self_node_information.mode;
+        match mode {
             Mode::DSC => {
                 dsc(state.clone(), &neighbour_host_names);
             }
             Mode::WRK => {
-                wrk(state.clone());
             }
             Mode::ERR => {}
             Mode::PANIC => {}

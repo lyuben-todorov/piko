@@ -5,6 +5,7 @@ use num_derive::{FromPrimitive, ToPrimitive};
 
 
 use serde::{Serialize, Deserialize};
+use std::hash::{Hash, Hasher};
 
 
 #[derive(FromPrimitive, ToPrimitive, Deserialize, Serialize, Clone)]
@@ -17,15 +18,15 @@ pub enum Mode {
 }
 
 pub struct State {
-    pub self_node: Node,
+    pub self_node_information: Node,
     pub neighbours: HashMap<String, Node>,
     pub cluster_size: usize,
 
 }
 
 impl State {
-    pub fn new(self_node: Node, neighbours: HashMap<String, Node>) -> Self {
-        State { self_node, neighbours, cluster_size: 0 }
+    pub fn new(self_node_information: Node, neighbours: HashMap<String, Node>) -> Self {
+        State { self_node_information, neighbours, cluster_size: 0 }
     }
 
     pub fn add_neighbour(&mut self, name: &str, node: Node) {
@@ -34,7 +35,7 @@ impl State {
     }
 
     pub fn change_mode(&mut self, mode: Mode) {
-        self.self_node.mode = mode;
+        self.self_node_information.mode = mode;
     }
 }
 
@@ -45,6 +46,18 @@ pub struct Node {
     pub name: String,
     pub host: String,
 }
+impl Hash for Node {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
+}
+
+impl PartialEq for Node {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+impl Eq for Node {}
 
 impl Node {
     pub fn new(name: String, mode: Mode, host: String) -> Node {
