@@ -16,7 +16,7 @@ pub fn listener_thread(recv: Receiver<u32>, state: Arc<RwLock<State>>, socket: T
         println!("{}", stream.peer_addr().unwrap());
 
         let mut bytes: Vec<u8> = Vec::new();
-        println!("bytes are{}", String::from_utf8_lossy(bytes.as_slice()));
+        println!("bytes are {}", String::from_utf8_lossy(bytes.as_slice()));
 
         let count = stream.read_to_end(&mut bytes).unwrap();
         println!("count is {}", count);

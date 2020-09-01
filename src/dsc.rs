@@ -20,9 +20,7 @@ pub fn dsc(state: Arc<RwLock<State>>, neighbour_list: &Vec<SocketAddr>) {
     if neighbour_list.len() == 0 {
         let mut state = state.write().unwrap();
         state.change_mode(Mode::WRK);
-        println!("bye");
-        return
-    }else {
+        return;
     }
 
     let neighbour_list = neighbour_list.as_slice();
@@ -68,8 +66,12 @@ fn discover(host: &SocketAddr, state_ref: Arc<RwLock<State>>, tx: &mut Sender<Ve
     let buffer = serde_cbor::to_vec(&req).unwrap();
     let buffer = buffer.as_slice();
 
-    tcp_stream.write(buffer);
+    println!("Buffer size is {} ", buffer.len());
 
+    let count = tcp_stream.write(buffer).unwrap();
+
+    println!("Written {} bytes", count);
+    
     let mut res: Vec<u8> = Vec::new();
 
     tcp_stream.read_to_end(&mut res);
