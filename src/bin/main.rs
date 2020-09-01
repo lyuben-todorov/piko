@@ -19,9 +19,9 @@ use std::collections::HashMap;
 use std::env;
 use std::env::current_dir;
 use std::path::{PathBuf};
-use piko::wrk::wrk;
+
 use piko::net::listener_thread;
-use std::sync::{Arc, Mutex, mpsc, RwLock};
+use std::sync::{Arc, mpsc, RwLock};
 use std::sync::mpsc::{Sender, Receiver};
 
 
@@ -91,11 +91,11 @@ fn main() {
     let self_node_information = Node::new(name, Mode::DSC, host_name);
 
 
-    let (state_sender, listener_receiver): (Sender<u32>, Receiver<u32>) = mpsc::channel();
-    let (listener_sender, state_receiver): (Sender<u32>, Receiver<u32>) = mpsc::channel();
+    let (_state_sender, listener_receiver): (Sender<u32>, Receiver<u32>) = mpsc::channel();
+    let (listener_sender, _state_receiver): (Sender<u32>, Receiver<u32>) = mpsc::channel();
 
-    let mut state_inner = State::new(self_node_information, neighbours);
-    let mut state = Arc::new(RwLock::new(state_inner)); // pass sender to state
+    let state_inner = State::new(self_node_information, neighbours);
+    let state = Arc::new(RwLock::new(state_inner)); // pass sender to state
 
     let state_ref = state.clone();
     rayon::spawn(move || listener_thread(listener_receiver, listener_sender, state_ref, listener));

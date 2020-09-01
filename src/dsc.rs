@@ -37,7 +37,7 @@ pub fn dsc(state: Arc<RwLock<State>>, neighbour_list: &Vec<String>) {
 // Request/response on same tcp stream
 // Writes result to state after acquiring write lock
 
-fn discover(host: &String, state_ref: Arc<RwLock<State>>, tx: &mut Sender<Vec<Node>>) {
+fn discover(host: &String, state_ref: Arc<RwLock<State>>, _tx: &mut Sender<Vec<Node>>) {
     println!("{}", host);
     let mut tcp_stream = TcpStream::connect(host).unwrap();
 
