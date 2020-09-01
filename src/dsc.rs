@@ -70,10 +70,7 @@ fn discover(host: &SocketAddr, state_ref: Arc<RwLock<State>>, tx: &mut Sender<Ve
     println!("Buffer size is {} ", buffer.len());
 
     tcp_stream.write_u8(buffer.len() as u8);
-
-    let count = tcp_stream.write(buffer).unwrap();
-
-    println!("Written {} bytes", count);
+    tcp_stream.write_all(buffer).unwrap();
 
     let mut res: Vec<u8> = Vec::new();
 

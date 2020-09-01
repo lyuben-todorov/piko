@@ -8,11 +8,11 @@ capable of acquiring a sequence 'lock' on the next sequence number, `6`, and pub
 Each node is in either of 3 general states: `DSC`, `WRK`, `ERR` for discovery, work and error respectively.
 
 ### Discovery phase  
-A node called "Ivan" starts as DSC, looking for other nodes on the cluster. Ivan sends a `DSCREQ` to its pre-defined    
-list of neighbours. The `DSCREQ` contains the sender's information. Each of the
-nodes responding to a `DSCREQ` should send a `DSCRES` with their list of neighbouring nodes and general status `DSC`, `WRK`, `ERR`.    
+A node called "Ivan" starts as DSC, looking for other nodes on the cluster. Ivan sends a `DscReq` to its pre-defined    
+list of neighbours. The `DscReq` contains the sender's information. Each of the
+nodes responding to a `DscReq` should send a `DscRes` with their list of neighbouring nodes and general status `DSC`, `WRK`, `ERR`.    
 Each of the receivers adds the sender, Ivan, to their list. Ivan adds each of the received hosts to his list. After     
-this operation, Ivan can send a `SEQRES` to each of its neighbours. Each one responds with their `SEQ` number     
+this operation, Ivan can send a `SeqRes` to each of its neighbours. Each one responds with their `SEQ` number     
 (which should be the same) and marks Ivan locally as `WRK`. Ivan is then promoted to `WRK`.    
 
 The only exception is when the node's neighbour list is empty, in which case it goes straight into `WRK`.
@@ -36,19 +36,13 @@ which contains the 'arguments' for different types of messages our protocol supp
 Everything past the parcel body is application-specific.
 
 ## Types
-### DSCREQ
+### DscReq
+* Strict *Request*/Response on same TCP stream
+* Body contains sender's information object
+* Receiver adds information object to its state
+* Expected `DscRes` in response
 
-#### Parcel contains:
-* 8-byte header
-* n-byte body
-    *  u16 - byte size of node `m`
-    *  `m` bytes - serialize to `Node`)
-#### Expected:
-`DSCRES`
-
-##### DSCRES
-* 8-byte header
-* n-byte body (serializes to _multiple_ `Node`)
-    *  u16 - number of nodes in message
-    *  u16 - byte size of next node `m`
-    *  `m` bytes - serialize to `Node`
+### DscRes
+* Response to *DscReq*
+* Strict Request/*Response* on same TCP stream
+* Body contains a list of known neighbour's information
