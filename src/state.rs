@@ -6,6 +6,8 @@ use num_derive::{FromPrimitive, ToPrimitive};
 
 use serde::{Serialize, Deserialize};
 use std::hash::{Hash, Hasher};
+use std::fmt::Display;
+use serde::export::Formatter;
 
 
 #[derive(FromPrimitive, ToPrimitive, Deserialize, Serialize, Clone)]
@@ -17,6 +19,11 @@ pub enum Mode {
     SHUTDOWN = 5,
 }
 
+impl Display for Mode {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        unimplemented!()
+    }
+}
 pub struct State {
     pub self_node_information: Node,
     pub neighbours: HashMap<String, Node>,

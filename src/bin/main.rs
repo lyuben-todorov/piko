@@ -23,6 +23,7 @@ use std::path::{PathBuf};
 use piko::net::listener_thread;
 use std::sync::{Arc, mpsc, RwLock};
 use std::sync::mpsc::{Sender, Receiver};
+use piko::wrk::wrk;
 
 
 fn main() {
@@ -65,10 +66,7 @@ fn main() {
     let mut neighbour_socket_addresses: Vec<SocketAddr> = Vec::new();
     for result in neighbour_host_names {
         let neighbour_host_name = result.into_str().expect("Error parsing cluster node entry.");
-        let socket = SocketAddr::from(
-            SocketAddrV4::new(
-                Ipv4Addr::from_str(&neighbour_host_name).expect("Error parsing neighbour host name"),
-                port as u16));
+        let socket = SocketAddr::from_str(&neighbour_host_name).unwrap();
         neighbour_socket_addresses.push(socket);
     }
 
@@ -107,13 +105,16 @@ fn main() {
     println!("Starting main worker process.");
 
     loop {
-        println!("Loop!");
         let mode = &state.read().unwrap().self_node_information.mode;
+
+        println!("Mode: {}", mode);
         match mode {
             Mode::DSC => {
                 dsc(state.clone(), &neighbour_socket_addresses);
             }
-            Mode::WRK => {}
+            Mode::WRK => {
+                wrk(state.clone());
+            }
             Mode::ERR => {}
             Mode::PANIC => {}
             Mode::SHUTDOWN => {
