@@ -35,7 +35,7 @@ impl Display for Type {
             Type::DscRes => write!(f, "{}", "DscRes"),
             Type::SeqReq => write!(f, "{}", "SeqReq"),
             Type::SeqRes => write!(f, "{}", "SeqRes"),
-            Type::Err => write!(f, "{}", "Err")
+            Type::ProtoError => write!(f, "{}", "Err")
         }
     }
 }
