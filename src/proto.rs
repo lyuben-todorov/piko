@@ -41,6 +41,7 @@ impl Display for Type {
 
 #[derive(Serialize, Deserialize)]
 pub enum Body {
+    Empty,
     DscReq {
         identity: Node
     },
@@ -58,7 +59,7 @@ pub struct ProtoParcel {
     pub parcel_type: Type,
     // id of sender node
     pub id: u16,
-    // size of body in bytes
+    // size of application-specific data in bytes
     pub size: u16,
     // message body
     pub body: Body,
@@ -70,5 +71,8 @@ impl ProtoParcel {
     }
     pub fn dsc_res(id: u16, neighbours_information: Vec<Node>) -> ProtoParcel {
         ProtoParcel { is_response: true, parcel_type: Type::DscRes, id, size: 0, body: Body::DscRes { neighbours: neighbours_information } }
+    }
+    pub fn seq_req(id: u16) -> ProtoParcel {
+        ProtoParcel { is_response: false, parcel_type: Type::SeqReq, id, size: 0, body: Body::Empty }
     }
 }

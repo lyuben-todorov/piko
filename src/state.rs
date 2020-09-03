@@ -9,6 +9,7 @@ use std::hash::{Hash, Hasher};
 use std::fmt::Display;
 use serde::export::Formatter;
 use std::fmt;
+use std::net::SocketAddr;
 
 
 #[derive(FromPrimitive, ToPrimitive, Deserialize, Serialize, Clone)]
@@ -18,7 +19,7 @@ pub enum Mode {
     Err = 3,
     Panic = 4,
     Shutdown = 5,
-
+    SeqRecovery = 6,
 }
 
 impl Display for Mode {
@@ -29,6 +30,7 @@ impl Display for Mode {
             Mode::Err => write!(f, "{}", "Err"),
             Mode::Panic => write!(f, "{}", "Panic"),
             Mode::Shutdown => write!(f, "{}", "Shutdown"),
+            Mode::SeqRecovery => write!(f, "{}", "SeqRecovery")
         }
     }
 }
@@ -36,12 +38,12 @@ impl Display for Mode {
 pub struct State {
     pub self_node_information: Node,
     pub neighbours: HashMap<String, Node>,
-
+    pub sequence: u8,
 }
 
 impl State {
     pub fn new(self_node_information: Node, neighbours: HashMap<String, Node>) -> Self {
-        State { self_node_information, neighbours }
+        State { self_node_information, neighbours, sequence: 0  }
     }
 
     pub fn get_size(&self) -> usize {
@@ -62,7 +64,7 @@ pub struct Node {
     pub id: u16,
     pub mode: Mode,
     pub name: String,
-    pub host: String,
+    pub host: SocketAddr,
 }
 
 impl Hash for Node {
@@ -80,7 +82,7 @@ impl PartialEq for Node {
 impl Eq for Node {}
 
 impl Node {
-    pub fn new(name: String, mode: Mode, host: String) -> Node {
+    pub fn new(name: String, mode: Mode, host: SocketAddr) -> Node {
         let id = Sha256::digest(name.as_bytes()).as_slice().read_u16::<BigEndian>().unwrap();
 
         Node { name, mode, host, id }

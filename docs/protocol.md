@@ -8,11 +8,12 @@ A node called "Ivan" starts as DSC, looking for other nodes on the cluster. Ivan
 list of neighbours. The `DscReq` contains the sender's information. Each of the
 nodes responding to a `DscReq` should send a `DscRes` with their list of neighbouring nodes and general status `DSC`, `WRK`, `ERR`.    
 Each of the receivers adds the sender, Ivan, to their list. Ivan adds each of the received hosts to his list. 
-### Sequence recovery phase
-After discovery, Ivan can send a `SeqRes` to each of its neighbours. Each one responds with their `SEQ` number     
-(which should be the same) and marks Ivan locally as `WRK`. Ivan is then promoted to `WRK`.    
-
 The only exception is when the node's neighbour list is empty, in which case it goes straight into `WRK`.
+
+### Sequence recovery phase
+After discovery, Ivan can send a `SeqRes` to each of its neighbours. Each one responds with their `SEQ` number. Ivan is then promoted to `WRK` with 
+the largest sequence number received.    
+
 
 ### Work phase
 A worker is required to send a heartbeat to each (for now) of its neighbours each 1s. If a node goes silent for more     
@@ -21,15 +22,18 @@ than `5`, seconds, it is removed from the cluster.
 ### Protocol format 
 Protocol operates under TCP. A protocol 'packet' is referred to as parcel. The encoding we're using is CBOR. The parcel looks like this:     
 ```rust
-    pub is_response: bool,
+pub struct ProtoParcel {
     // whether or not packet is a response
-    pub parcel_type: Type,
+    pub is_response: bool,
     // type of packet
-    pub id: u16,
+    pub parcel_type: Type,
     // id of sender node
-    pub size: u16, // size of body in bytes
-
+    pub id: u16,
+    // size of application-specific data in bytes
+    pub size: u16,
+    // message body
     pub body: Body,
+}
 ``` 
 Every parcel is preceded by an u8 `n` indicating the size of the protocol message in bytes, followed by `n` bytes of CBOR-serialized ProtoParcel. 
 
@@ -43,6 +47,12 @@ Everything past the parcel body is application-specific.
 * Expected `DscRes` in response
 
 ### DscRes
-* Response to `DscReq`
 * Strict Request/*Response* on same TCP stream
+* Response to `DscReq`
 * Body contains a list of known neighbour's information
+
+### SeqRes
+* Strict *Request*/Response on same TCP stream
+* Empty body 
+
+

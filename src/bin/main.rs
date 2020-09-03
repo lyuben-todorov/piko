@@ -64,6 +64,7 @@ fn main() {
         .get_array("cluster.neighbours")
         .expect("Missing cluster settings.");
     let mut neighbour_socket_addresses: Vec<SocketAddr> = Vec::new();
+
     for result in neighbour_host_names {
         let neighbour_host_name = result.into_str().expect("Error parsing cluster node entry.");
         let socket = SocketAddr::from_str(&neighbour_host_name).unwrap();
@@ -88,7 +89,7 @@ fn main() {
 
 
     let neighbours = HashMap::<String, Node>::new();
-    let self_node_information = Node::new(name, Mode::Dsc, host_name);
+    let self_node_information = Node::new(name, Mode::Dsc, address);
 
 
     let (state_sender, listener_receiver): (Sender<u32>, Receiver<u32>) = mpsc::channel();
@@ -115,6 +116,9 @@ fn main() {
             Mode::Wrk => {
                 drop(state_lock);
                 wrk(state.clone(), state_sender.clone());
+            }
+            Mode::SeqRecovery =>{
+                drop(state_lock);
             }
             Mode::Err => {}
             Mode::Panic => {}
