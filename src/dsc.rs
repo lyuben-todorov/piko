@@ -7,7 +7,7 @@ use std::io::{Write, Read};
 use std::sync::mpsc::{Sender, Receiver};
 use std::collections::HashSet;
 use rayon::prelude::*;
-use byteorder::{WriteBytesExt, BigEndian};
+
 use crate::net::{write_parcel, read_parcel};
 
 // Start discovery routine

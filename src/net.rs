@@ -6,8 +6,8 @@ use std::sync::mpsc::{Receiver};
 use std::sync::{Arc, RwLock};
 use std::io::{Read, Write};
 use crate::proto::{ProtoParcel, Type, Body};
-use byteorder::{ReadBytesExt, BigEndian, WriteBytesExt};
-use std::error::Error;
+use byteorder::{ReadBytesExt, WriteBytesExt};
+
 
 pub fn read_parcel(stream: &mut TcpStream) -> ProtoParcel {
     let count = stream.read_u8().unwrap();
