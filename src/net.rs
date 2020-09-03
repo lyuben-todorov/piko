@@ -48,10 +48,15 @@ pub fn listener_thread(_recv: Receiver<u32>, state: Arc<RwLock<State>>, socket: 
                         println!("Received DscReq from node {}", identity.name);
                         let mut neighbours: Vec<Node> = Vec::new();
                         let state = state_ref.read().unwrap();
+
                         let state_neighbours: Vec<Node> = state.neighbours.values().cloned().collect();
+
                         let self_node = state.self_node_information.clone();
+                        let id: u16 = self_node.id;
                         neighbours.extend_from_slice(state_neighbours.as_slice());
-                        let parcel = ProtoParcel::dsc_res(self_node, neighbours);
+                        neighbours.push(self_node);
+
+                        let parcel = ProtoParcel::dsc_res(id, neighbours);
                         write_parcel(&mut stream, parcel);
                     } else {
                         println!("Body-header type mismatch!");

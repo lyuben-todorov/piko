@@ -67,7 +67,7 @@ impl ProtoParcel {
     pub fn dsc_req(self_node_information: Node) -> ProtoParcel {
         ProtoParcel { is_response: false, parcel_type: Type::DscReq, id: self_node_information.id, size: 0, body: Body::DscReq { identity: self_node_information } }
     }
-    pub fn dsc_res(self_node_information: Node, neighbours_information: Vec<Node>) -> ProtoParcel {
-        ProtoParcel { is_response: true, parcel_type: Type::DscRes, id: self_node_information.id, size: 0, body: Body::DscRes { neighbours: neighbours_information } }
+    pub fn dsc_res(id: u16, neighbours_information: Vec<Node>) -> ProtoParcel {
+        ProtoParcel { is_response: true, parcel_type: Type::DscRes, id, size: 0, body: Body::DscRes { neighbours: neighbours_information } }
     }
 }
