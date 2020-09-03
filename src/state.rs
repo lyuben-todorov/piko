@@ -28,25 +28,27 @@ impl Display for Mode {
             Mode::ERR => write!(f, "{}", "Err"),
             Mode::PANIC => write!(f, "{}", "Panic"),
             Mode::SHUTDOWN => write!(f, "{}", "Shutdown"),
-
         }
     }
 }
+
 pub struct State {
     pub self_node_information: Node,
     pub neighbours: HashMap<String, Node>,
-    pub cluster_size: usize,
 
 }
 
 impl State {
     pub fn new(self_node_information: Node, neighbours: HashMap<String, Node>) -> Self {
-        State { self_node_information, neighbours, cluster_size: 0 }
+        State { self_node_information, neighbours }
     }
 
-    pub fn add_neighbour(&mut self, name: &str, node: Node) {
-        self.neighbours.insert(name.parse().unwrap(), node);
-        self.cluster_size += 1;
+    pub fn get_size(&self) -> usize {
+        return self.neighbours.len();
+    }
+
+    pub fn add_neighbour(&mut self, node: Node) {
+        self.neighbours.insert(node.name.clone(), node);
     }
 
     pub fn change_mode(&mut self, mode: Mode) {
@@ -61,6 +63,7 @@ pub struct Node {
     pub name: String,
     pub host: String,
 }
+
 impl Hash for Node {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.id.hash(state);
@@ -72,6 +75,7 @@ impl PartialEq for Node {
         self.id == other.id
     }
 }
+
 impl Eq for Node {}
 
 impl Node {

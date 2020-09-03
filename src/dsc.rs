@@ -37,18 +37,19 @@ pub fn dsc(state: Arc<RwLock<State>>, neighbour_list: &Vec<SocketAddr>) {
     let mut neighbours: HashSet<Node> = HashSet::new();
 
     for nodes in receiver.iter() {
-        println!("nice");
 
         neighbours.extend(nodes);
     }
 
     for node in &neighbours {
-        println!(" Found {}!", node.name)
+        println!("Found {}!", node.name)
     }
 
     let mut state = state.write().unwrap();
     state.change_mode(Mode::WRK);
-    state.cluster_size = neighbours.len();
+    for neighbour in neighbours {
+        state.add_neighbour(neighbour);
+    }
 }
 
 // Request/response on same tcp stream
@@ -76,7 +77,7 @@ fn discover(host: &SocketAddr, state_ref: Arc<RwLock<State>>, tx: &mut Sender<Ve
         Type::DscRes => {
             if let Body::DscRes { neighbours } = res_parcel.body {
                 for neighbour in &neighbours {
-                    println!("{}",neighbour.name);
+                    println!("{}", neighbour.name);
                 }
                 tx.send(neighbours).unwrap();
             } else {
