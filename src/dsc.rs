@@ -63,7 +63,8 @@ fn discover(host: &SocketAddr, state_ref: Arc<RwLock<State>>, tx: &mut Sender<Ve
 
     let state = state_ref.read().unwrap();
 
-    let req = ProtoParcel::dsq_req(&state.self_node_information);
+    let self_node = state.self_node_information.clone();
+    let req = ProtoParcel::dsc_req(self_node);
     let buffer = serde_cbor::to_vec(&req).unwrap();
     let buffer = buffer.as_slice();
 

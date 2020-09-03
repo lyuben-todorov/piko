@@ -64,8 +64,10 @@ pub struct ProtoParcel {
 }
 
 impl ProtoParcel {
-    pub fn dsq_req(self_node_information: &Node) -> ProtoParcel {
-        let node: Node = self_node_information.clone();
-        ProtoParcel { is_response: false, parcel_type: Type::DscReq, id: self_node_information.id, size: 0, body: Body::DscReq { identity: node } }
+    pub fn dsc_req(self_node_information: Node) -> ProtoParcel {
+        ProtoParcel { is_response: false, parcel_type: Type::DscReq, id: self_node_information.id, size: 0, body: Body::DscReq { identity: self_node_information } }
+    }
+    pub fn dsc_res(self_node_information: Node, neighbours_information: Vec<Node>) -> ProtoParcel {
+        ProtoParcel { is_response: true, parcel_type: Type::DscRes, id: self_node_information.id, size: 0, body: Body::DscRes { neighbours: neighbours_information } }
     }
 }

@@ -22,16 +22,19 @@ A worker is required to send a heartbeat to each (for now) of its neighbours eac
 than `5`, seconds, it is removed from the cluster.
 
 ### Protocol format 
-Protocol operates under TCP. The protocol wraps the 'message' within a `parcel`. The parcel contains a 64 bit header:     
+Protocol operates under TCP. A protocol 'packet' is referred to as parcel. The encoding we're using is CBOR. The parcel looks like this:     
 ```rust
-    pub id: u16
-    pub size: u16,
-    pub meta: u16,
-    pub parcel_type: Type, // u16
-``` 
-The size field indicates how many bytes _after_ the header are still protocol-specific. This is the body of the parcel,
-which contains the 'arguments' for different types of messages our protocol supports.
+    pub is_response: bool,
+    // whether or not packet is a response
+    pub parcel_type: Type,
+    // type of packet
+    pub id: u16,
+    // id of sender node
+    pub size: u16, // size of body in bytes
 
+    pub body: Body,
+``` 
+Every parcel is preceded by an u8 `n` indicating the size of the protocol message in bytes, followed by `n` bytes of CBOR-serialized ProtoParcel. 
 
 Everything past the parcel body is application-specific.
 
@@ -43,6 +46,6 @@ Everything past the parcel body is application-specific.
 * Expected `DscRes` in response
 
 ### DscRes
-* Response to *DscReq*
+* Response to `DscReq`
 * Strict Request/*Response* on same TCP stream
 * Body contains a list of known neighbour's information
