@@ -52,14 +52,15 @@ pub enum Body {
 
 #[derive(Serialize, Deserialize)]
 pub struct ProtoParcel {
-    pub is_response: bool,
     // whether or not packet is a response
-    pub parcel_type: Type,
+    pub is_response: bool,
     // type of packet
-    pub id: u16,
+    pub parcel_type: Type,
     // id of sender node
-    pub size: u16, // size of body in bytes
-
+    pub id: u16,
+    // size of body in bytes
+    pub size: u16,
+    // message body
     pub body: Body,
 }
 

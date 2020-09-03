@@ -88,7 +88,7 @@ fn main() {
 
 
     let neighbours = HashMap::<String, Node>::new();
-    let self_node_information = Node::new(name, Mode::DSC, host_name);
+    let self_node_information = Node::new(name, Mode::Dsc, host_name);
 
 
     let (state_sender, listener_receiver): (Sender<u32>, Receiver<u32>) = mpsc::channel();
@@ -108,17 +108,17 @@ fn main() {
         println!("Mode: {}", mode);
         match mode {
 
-            Mode::DSC => {
+            Mode::Dsc => {
                 drop(state_lock);
                 dsc(state.clone(), &neighbour_socket_addresses);
             }
-            Mode::WRK => {
+            Mode::Wrk => {
                 drop(state_lock);
                 wrk(state.clone(), state_sender.clone());
             }
-            Mode::ERR => {}
-            Mode::PANIC => {}
-            Mode::SHUTDOWN => {
+            Mode::Err => {}
+            Mode::Panic => {}
+            Mode::Shutdown => {
                 println!("Bye!");
                 break;
             }

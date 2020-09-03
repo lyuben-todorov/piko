@@ -12,42 +12,34 @@ use crate::net::{write_parcel, read_parcel};
 
 // Start discovery routine
 pub fn dsc(state: Arc<RwLock<State>>, neighbour_list: &Vec<SocketAddr>) {
-
-    // begin parallel scope
-    let (sender, receiver): (Sender<Vec<Node>>, Receiver<Vec<Node>>) = mpsc::channel();
-
-    println!("Attempting to connect to {} hosts", neighbour_list.len());
-
     // Skip discovery
     if neighbour_list.len() == 0 {
         let mut state = state.write().unwrap();
-        state.change_mode(Mode::WRK);
+        state.change_mode(Mode::Wrk);
         return;
     }
 
+    println!("Attempting to connect to {} hosts", neighbour_list.len());
+
+    let (sender, receiver): (Sender<Vec<Node>>, Receiver<Vec<Node>>) = mpsc::channel(); // return results on channel
+    // begin parallel scope
     let neighbour_list = neighbour_list.as_slice();
     neighbour_list.into_par_iter().for_each_with(sender, |s, addr| {
         let state_ref = state.clone();
         discover(&addr, state_ref, s);
     });
-
     // end parallel scope
-
 
     let mut neighbours: HashSet<Node> = HashSet::new();
 
+    // collect results
     for nodes in receiver.iter() {
-
         neighbours.extend(nodes);
     }
-
-    for node in &neighbours {
-        println!("Found {}!", node.name)
-    }
-
-    let mut state = state.write().unwrap();
-    state.change_mode(Mode::WRK);
+    let mut state = state.write().unwrap(); // acquire write lock
+    state.change_mode(Mode::Wrk);
     for neighbour in neighbours {
+        println!("Found {}!", neighbour.name);
         state.add_neighbour(neighbour);
     }
 }
@@ -76,9 +68,6 @@ fn discover(host: &SocketAddr, state_ref: Arc<RwLock<State>>, tx: &mut Sender<Ve
     match res_parcel.parcel_type {
         Type::DscRes => {
             if let Body::DscRes { neighbours } = res_parcel.body {
-                for neighbour in &neighbours {
-                    println!("{}", neighbour.name);
-                }
                 tx.send(neighbours).unwrap();
             } else {
                 println!("Body-header type mismatch!");

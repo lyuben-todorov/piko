@@ -13,21 +13,22 @@ use std::fmt;
 
 #[derive(FromPrimitive, ToPrimitive, Deserialize, Serialize, Clone)]
 pub enum Mode {
-    WRK = 1,
-    DSC = 2,
-    ERR = 3,
-    PANIC = 4,
-    SHUTDOWN = 5,
+    Wrk = 1,
+    Dsc = 2,
+    Err = 3,
+    Panic = 4,
+    Shutdown = 5,
+
 }
 
 impl Display for Mode {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Mode::WRK => write!(f, "{}", "Wrk"),
-            Mode::DSC => write!(f, "{}", "Dsc"),
-            Mode::ERR => write!(f, "{}", "Err"),
-            Mode::PANIC => write!(f, "{}", "Panic"),
-            Mode::SHUTDOWN => write!(f, "{}", "Shutdown"),
+            Mode::Wrk => write!(f, "{}", "Wrk"),
+            Mode::Dsc => write!(f, "{}", "Dsc"),
+            Mode::Err => write!(f, "{}", "Err"),
+            Mode::Panic => write!(f, "{}", "Panic"),
+            Mode::Shutdown => write!(f, "{}", "Shutdown"),
         }
     }
 }
