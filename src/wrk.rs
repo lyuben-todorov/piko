@@ -12,6 +12,7 @@ pub fn wrk(state: Arc<RwLock<State>>, _sender: Sender<u32>) {
         // don't spawn heartbeat thread
     } else {
         println!("Spawning heartbeat thread.");
+        park();
     }
 }
 
