@@ -36,12 +36,14 @@ pub fn dsc(state: Arc<RwLock<State>>, neighbour_list: &Vec<SocketAddr>) {
 
     let mut neighbours: HashSet<Node> = HashSet::new();
 
+    println!("Marco");
     for nodes in receiver.iter() {
+        println!("nice";);
         neighbours.extend(nodes);
     }
 
     for node in &neighbours {
-        println!("{}", node.name)
+        println!(" Found {}!", node.name)
     }
 
     let mut state = state.write().unwrap();
