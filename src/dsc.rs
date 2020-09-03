@@ -36,9 +36,9 @@ pub fn dsc(state: Arc<RwLock<State>>, neighbour_list: &Vec<SocketAddr>) {
 
     let mut neighbours: HashSet<Node> = HashSet::new();
 
-    println!("Marco");
     for nodes in receiver.iter() {
         println!("nice");
+
         neighbours.extend(nodes);
     }
 
@@ -72,10 +72,12 @@ fn discover(host: &SocketAddr, state_ref: Arc<RwLock<State>>, tx: &mut Sender<Ve
     write_parcel(&mut tcp_stream, req_parcel);
     let res_parcel = read_parcel(&mut tcp_stream);
 
-    println!("ping {}",res_parcel.id);
     match res_parcel.parcel_type {
         Type::DscRes => {
             if let Body::DscRes { neighbours } = res_parcel.body {
+                for neighbour in &neighbours {
+                    println!("{}",neighbour.name);
+                }
                 tx.send(neighbours).unwrap();
             } else {
                 println!("Body-header type mismatch!");
