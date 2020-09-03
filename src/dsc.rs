@@ -8,6 +8,7 @@ use std::sync::mpsc::{Sender, Receiver};
 use std::collections::HashSet;
 use rayon::prelude::*;
 use byteorder::{WriteBytesExt, BigEndian};
+use crate::net::{write_parcel, read_parcel};
 
 // Start discovery routine
 pub fn dsc(state: Arc<RwLock<State>>, neighbour_list: &Vec<SocketAddr>) {
@@ -64,23 +65,14 @@ fn discover(host: &SocketAddr, state_ref: Arc<RwLock<State>>, tx: &mut Sender<Ve
     let state = state_ref.read().unwrap();
 
     let self_node = state.self_node_information.clone();
-    let req = ProtoParcel::dsc_req(self_node);
-    let buffer = serde_cbor::to_vec(&req).unwrap();
-    let buffer = buffer.as_slice();
+    let req_parcel = ProtoParcel::dsc_req(self_node);
 
-    println!("Buffer size is {} ", buffer.len());
+    write_parcel(&mut tcp_stream, req_parcel);
+    let res_parcel = read_parcel(&mut tcp_stream);
 
-    tcp_stream.write_u8(buffer.len() as u8);
-    tcp_stream.write_all(buffer).unwrap();
-
-    let mut res: Vec<u8> = Vec::new();
-
-    tcp_stream.read(&mut res);
-
-    let res: ProtoParcel = serde_cbor::from_slice(res.as_slice()).unwrap();
-    match res.parcel_type {
+    match res_parcel.parcel_type {
         Type::DscRes => {
-            if let Body::DscRes { neighbours } = res.body {
+            if let Body::DscRes { neighbours } = res_parcel.body {
                 tx.send(neighbours);
             } else {
                 println!("Body-header type mismatch!");
@@ -90,7 +82,7 @@ fn discover(host: &SocketAddr, state_ref: Arc<RwLock<State>>, tx: &mut Sender<Ve
 
         Type::ProtoError => {}
         _ => {
-            println!("Unexpected response type to discovery request, {}", res.parcel_type);
+            println!("Unexpected response type to discovery request, {}", res_parcel.parcel_type);
             return;
         }
     }

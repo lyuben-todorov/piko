@@ -6,7 +6,7 @@ use std::sync::mpsc::{Receiver};
 use std::sync::{Arc, RwLock};
 use std::io::{Read, Write};
 use crate::proto::{ProtoParcel, Type, Body};
-use byteorder::{ReadBytesExt, BigEndian};
+use byteorder::{ReadBytesExt, BigEndian, WriteBytesExt};
 use std::error::Error;
 
 pub fn read_parcel(stream: &mut TcpStream) -> ProtoParcel {
@@ -19,6 +19,16 @@ pub fn read_parcel(stream: &mut TcpStream) -> ProtoParcel {
 
     let proto_parcel: ProtoParcel = serde_cbor::from_slice(buf.as_slice()).unwrap();
     proto_parcel
+}
+
+pub fn write_parcel(stream: &mut TcpStream, parcel: ProtoParcel) {
+    let parcel = serde_cbor::to_vec(&parcel).unwrap();
+    let buf = parcel.as_slice();
+    let count = buf.len();
+
+    println!("Writing {} bytes", count);
+    stream.write_u8(count as u8);
+    stream.write_all(buf);
 }
 
 pub fn listener_thread(_recv: Receiver<u32>, state: Arc<RwLock<State>>, socket: TcpListener) {
@@ -42,8 +52,7 @@ pub fn listener_thread(_recv: Receiver<u32>, state: Arc<RwLock<State>>, socket: 
                         let self_node = state.self_node_information.clone();
                         neighbours.extend_from_slice(state_neighbours.as_slice());
                         let parcel = ProtoParcel::dsc_res(self_node, neighbours);
-                        let parcel = serde_cbor::to_vec(&parcel).unwrap();
-                        stream.write_all(parcel.as_slice());
+                        write_parcel(&mut stream, parcel);
                     } else {
                         println!("Body-header type mismatch!");
                         return;
