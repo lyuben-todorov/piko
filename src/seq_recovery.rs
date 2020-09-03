@@ -6,7 +6,7 @@ use std::net::{SocketAddr, TcpStream};
 use crate::proto::ProtoParcel;
 
 pub fn seq_recovery(state: Arc<RwLock<State>>, neighbour_list: &Vec<Node>) {
-    let (sender, receiver): (Sender<u8>, Receiver<u8>) = mpsc::channel(); // return results on channel
+    let (sender, _receiver): (Sender<u8>, Receiver<u8>) = mpsc::channel(); // return results on channel
     // begin parallel scope
     let neighbour_list: Vec<SocketAddr> = neighbour_list.iter().map(|node|{node.host}).collect();
 
@@ -17,9 +17,9 @@ pub fn seq_recovery(state: Arc<RwLock<State>>, neighbour_list: &Vec<Node>) {
     // end parallel scope
 }
 
-fn recover(host: &SocketAddr, state_ref: Arc<RwLock<State>>, tx: &mut Sender<u8>) {
+fn recover(host: &SocketAddr, state_ref: Arc<RwLock<State>>, _tx: &mut Sender<u8>) {
     println!("Connecting to {}", host);
-    let mut tcp_stream = match TcpStream::connect(host) {
+    let _tcp_stream = match TcpStream::connect(host) {
         Ok(stream) => stream,
         Err(err) => {
             println!("{}: {}", err, host);
@@ -28,5 +28,5 @@ fn recover(host: &SocketAddr, state_ref: Arc<RwLock<State>>, tx: &mut Sender<u8>
     };
     let state = state_ref.read().unwrap();
 
-    let req = ProtoParcel::seq_req(state.self_node_information.id);
+    let _req = ProtoParcel::seq_req(state.self_node_information.id);
 }
