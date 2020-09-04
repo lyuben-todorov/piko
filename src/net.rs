@@ -77,7 +77,6 @@ pub fn listener_thread(_recv: Receiver<u32>, state: Arc<RwLock<State>>, socket: 
                 Type::SeqReq => {
                     println!("Received SeqReq from node {}", parcel.id);
 
-
                 }
                 Type::ProtoError => {
                     println!("Proto Error")

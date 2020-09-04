@@ -27,6 +27,7 @@ pub fn seq_recovery(state: Arc<RwLock<State>>) {
     // end parallel scope
 
     let max_seq = receiver.iter().max_by_key(|seq| *seq).unwrap();
+    println!("Recovered sequence number {}", max_seq);
     let mut state = state.write().unwrap();
     state.sequence = max_seq;
     state.change_mode(Mode::Wrk);

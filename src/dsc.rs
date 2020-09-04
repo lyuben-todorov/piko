@@ -53,7 +53,6 @@ pub fn dsc(state: Arc<RwLock<State>>, neighbour_list: &Vec<SocketAddr>) {
 
 // Request/response on same tcp stream
 // Writes result to state after acquiring write lock
-
 fn discover(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<Vec<Node>>) {
     println!("Connecting to {}", host);
     let mut tcp_stream = match TcpStream::connect(host) {
