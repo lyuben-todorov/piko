@@ -55,4 +55,21 @@ Everything past the parcel body is application-specific.
 * Strict *Request*/Response on same TCP stream
 * Empty body 
 
+```
+Todo:
+
+Event registration and propagation.
+
+Shared state: clients.
+Shared state: neighbours.
+
+Receive message from neighbour on network thread -> ack -> dispatch thread to tell clients
+Receive message from client on main thread -> propagate to neighbours -> receive acks -> dispatch thread to tell clients
+
+Figure out http/application interface.
+
+Sequencing.
+
+```
+
 

@@ -7,6 +7,7 @@ use std::sync::{Arc, RwLock};
 use std::io::{Read, Write};
 use crate::proto::{ProtoParcel, Type, Body};
 use byteorder::{ReadBytesExt, WriteBytesExt};
+use std::convert::identity;
 
 
 pub fn read_parcel(stream: &mut TcpStream) -> ProtoParcel {
@@ -21,7 +22,7 @@ pub fn read_parcel(stream: &mut TcpStream) -> ProtoParcel {
     proto_parcel
 }
 
-pub fn write_parcel(stream: &mut TcpStream, parcel: ProtoParcel) {
+pub fn write_parcel(stream: &mut TcpStream, parcel: &ProtoParcel) {
     let parcel = serde_cbor::to_vec(&parcel).unwrap();
     let buf = parcel.as_slice();
     let count = buf.len();
@@ -45,26 +46,39 @@ pub fn listener_thread(_recv: Receiver<u32>, state: Arc<RwLock<State>>, socket: 
             match parcel.parcel_type {
                 Type::DscReq => {
                     if let Body::DscReq { identity } = parcel.body {
-                        println!("Received DscReq from node {}", identity.name);
-                        let mut state = state_ref.write().unwrap();
+                        println!("Received DscReq from node {}", parcel.id);
+
+
+                        let mut state = state_ref.write().unwrap(); // acquire write lock
+
                         let mut neighbours: Vec<Node> = Vec::new();
+
                         let state_neighbours: Vec<Node> = state.neighbours.values().cloned().collect();
                         let self_node = state.self_node_information.clone();
+
                         println!("Adding {} to state", identity.name);
                         state.add_neighbour(identity); // add node to state after neighbours are cloned
+                        drop(state); // drop write lock before tcp writes
 
                         let id: u16 = self_node.id;
+
                         neighbours.extend_from_slice(state_neighbours.as_slice());
                         neighbours.push(self_node);
+
                         let parcel = ProtoParcel::dsc_res(id, neighbours);
 
-                        write_parcel(&mut stream, parcel);
+                        write_parcel(&mut stream, &parcel);
                     } else {
                         println!("Body-header type mismatch!");
                         return;
                     }
                 }
 
+                Type::SeqReq => {
+                    println!("Received SeqReq from node {}", parcel.id);
+
+
+                }
                 Type::ProtoError => {
                     println!("Proto Error")
                 }

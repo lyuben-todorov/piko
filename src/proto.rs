@@ -48,6 +48,9 @@ pub enum Body {
     DscRes {
         neighbours: Vec<Node>,
     },
+    SeqRes {
+        seq_number: u8
+    },
 }
 
 
