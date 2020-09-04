@@ -7,7 +7,7 @@ use std::sync::{Arc, RwLock};
 use std::io::{Read, Write};
 use crate::proto::{ProtoParcel, Type, Body};
 use byteorder::{ReadBytesExt, WriteBytesExt};
-use std::convert::identity;
+
 
 
 pub fn read_parcel(stream: &mut TcpStream) -> ProtoParcel {

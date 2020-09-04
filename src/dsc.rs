@@ -9,7 +9,7 @@ use std::collections::HashSet;
 use rayon::prelude::*;
 
 use crate::net::{write_parcel, read_parcel};
-use std::ops::Deref;
+
 
 // Start discovery routine
 pub fn dsc(state: Arc<RwLock<State>>, neighbour_list: &Vec<SocketAddr>) {
@@ -32,7 +32,7 @@ pub fn dsc(state: Arc<RwLock<State>>, neighbour_list: &Vec<SocketAddr>) {
     // begin parallel scope
     let neighbour_list = neighbour_list.as_slice();
     neighbour_list.into_par_iter().for_each_with(sender, |s, addr| {
-        let state_ref = state.clone();
+        let _state_ref = state.clone();
         discover(&addr, &req_parcel, s);
     });
     // end parallel scope
