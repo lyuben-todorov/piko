@@ -24,6 +24,7 @@ use piko::net::listener_thread;
 use std::sync::{Arc, mpsc, RwLock};
 use std::sync::mpsc::{Sender, Receiver};
 use piko::wrk::wrk;
+use piko::seq_recovery::seq_recovery;
 
 
 fn main() {
@@ -119,6 +120,7 @@ fn main() {
             }
             Mode::SeqRecovery =>{
                 drop(state_lock);
+                seq_recovery(state.clone());
             }
             Mode::Err => {}
             Mode::Panic => {}

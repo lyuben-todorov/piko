@@ -6,16 +6,20 @@ use std::net::{SocketAddr, TcpStream};
 use crate::proto::{ProtoParcel, Type, Body};
 use crate::net::{write_parcel, read_parcel};
 
-pub fn seq_recovery(state: Arc<RwLock<State>>, neighbour_list: &Vec<Node>) {
-    let (sender, receiver): (Sender<u8>, Receiver<u8>) = mpsc::channel(); // return results on channel
-    // begin parallel scope
-    let neighbour_list: Vec<SocketAddr> = neighbour_list.iter().map(|node| { node.host }).collect();
+pub fn seq_recovery(state: Arc<RwLock<State>>) {
+
+    let (sender, receiver): (Sender<u8>, Receiver<u8>) = mpsc::channel(); // setup channel for results
 
     let state_ref = state.read().unwrap();
+    let neighbour_list: Vec<Node> = state_ref.neighbours.values().cloned().collect();
+    let neighbour_list: Vec<SocketAddr> = neighbour_list.iter().map(|node| { node.host }).collect(); // get socketaddrs
+
     let id = state_ref.self_node_information.id;
-    drop(state_ref);
+    drop(state_ref); // drop lock
+
     let req = ProtoParcel::seq_req(id);
 
+    // begin parallel scope
     neighbour_list.into_par_iter().for_each_with(sender, |s, addr| {
         let state_ref = state.clone();
         recover(&addr, &req, s);
