@@ -10,13 +10,14 @@ nodes responding to a `DscReq` should send a `DscRes` with their list of neighbo
 Each of the receivers adds the sender, Ivan, to their list. Ivan adds each of the received hosts to his list. 
 The only exception is when the node's neighbour list is empty, in which case it goes straight into `WRK`.
 
-### Sequence recovery phase
-After discovery, Ivan can send a `SeqRes` to each of its neighbours. Each one responds with their `SEQ` number. Ivan is then promoted to `WRK` with 
-the largest sequence number received.    
+### Sequence recovery
+After discovery, Ivan can send a `SeqRes` to each of its neighbours. Each one responds with their `SEQ` number.
 
+### State change
+A node can send a `StateChange` parcel containing its new state so that its neighbours can locally update it.
 
 ### Work phase
-A worker is required to send a heartbeat to each (for now) of its neighbours each 1s. If a node goes silent for more     
+A worker is required to send a heartbeat to each (for now) of its working neighbours each 3s. If a node goes silent for more     
 than `5`, seconds, it is removed from the cluster.
 
 ### Protocol format 

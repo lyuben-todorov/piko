@@ -1,6 +1,6 @@
 use std::{fmt};
 use num_derive::{FromPrimitive, ToPrimitive};
-use crate::state::Node;
+use crate::state::{Node, Mode};
 
 use std::fmt::Display;
 
@@ -11,11 +11,12 @@ static PROTO_VERSION: &str = "1.0";
 // Enumeration over the types of protocol messages
 #[derive(FromPrimitive, ToPrimitive, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Type {
+    ProtoError = 0,
     DscReq = 1,
     DscRes = 2,
     SeqReq = 3,
     SeqRes = 4,
-    ProtoError = 5,
+    StateChange = 5,
 }
 
 // Enumeration over the types of protocol errors.
@@ -33,7 +34,8 @@ impl Display for Type {
             Type::DscRes => write!(f, "{}", "DscRes"),
             Type::SeqReq => write!(f, "{}", "SeqReq"),
             Type::SeqRes => write!(f, "{}", "SeqRes"),
-            Type::ProtoError => write!(f, "{}", "Err")
+            Type::ProtoError => write!(f, "{}", "Err"),
+            Type::StateChange => write!(f, "{}", "StateChange")
         }
     }
 }
@@ -50,6 +52,9 @@ pub enum Body {
     },
     SeqRes {
         seq_number: u8
+    },
+    StateChange {
+        mode: Mode
     },
 }
 
@@ -77,5 +82,11 @@ impl ProtoParcel {
     }
     pub fn seq_req(id: u16) -> ProtoParcel {
         ProtoParcel { is_response: false, parcel_type: Type::SeqReq, id, size: 0, body: Body::Empty }
+    }
+    pub fn seq_res(id: u16, seq_number: u8) -> ProtoParcel {
+        ProtoParcel { is_response: true, parcel_type: Type::SeqRes, id, size: 0, body: Body::SeqRes { seq_number } }
+    }
+    pub fn state_change(id: u16, mode: Mode) -> ProtoParcel {
+        ProtoParcel { is_response: false, parcel_type: Type::StateChange, id, size: 0, body: Body::StateChange { mode } }
     }
 }

@@ -109,18 +109,17 @@ fn main() {
         let mode = &state_lock.self_node_information.mode;
         println!("Mode: {}", mode);
         match mode {
-
             Mode::Dsc => {
                 drop(state_lock);
                 dsc(state.clone(), &neighbour_socket_addresses);
             }
+            Mode::SeqRecovery => {
+                drop(state_lock);
+                seq_recovery(state.clone());
+            }
             Mode::Wrk => {
                 drop(state_lock);
                 wrk(state.clone(), state_sender.clone());
-            }
-            Mode::SeqRecovery =>{
-                drop(state_lock);
-                seq_recovery(state.clone());
             }
             Mode::Err => {}
             Mode::Panic => {}

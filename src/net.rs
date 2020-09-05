@@ -9,7 +9,6 @@ use crate::proto::{ProtoParcel, Type, Body};
 use byteorder::{ReadBytesExt, WriteBytesExt};
 
 
-
 pub fn read_parcel(stream: &mut TcpStream) -> ProtoParcel {
     let count = stream.read_u8().unwrap();
 
@@ -48,11 +47,9 @@ pub fn listener_thread(_recv: Receiver<u32>, state: Arc<RwLock<State>>, socket: 
                     if let Body::DscReq { identity } = parcel.body {
                         println!("Received DscReq from node {}", parcel.id);
 
-
-                        let mut state = state_ref.write().unwrap(); // acquire write lock
-
                         let mut neighbours: Vec<Node> = Vec::new();
 
+                        let mut state = state_ref.write().unwrap(); // acquire write lock
                         let state_neighbours: Vec<Node> = state.neighbours.values().cloned().collect();
                         let self_node = state.self_node_information.clone();
 
@@ -76,7 +73,12 @@ pub fn listener_thread(_recv: Receiver<u32>, state: Arc<RwLock<State>>, socket: 
 
                 Type::SeqReq => {
                     println!("Received SeqReq from node {}", parcel.id);
+                    let mut state = state_ref.write().unwrap(); // acquire write lock
+                    let seq = state.sequence;
+                    let parcel = ProtoParcel::seq_res(state.self_node_information.id, seq);
+                    drop(state);
 
+                    write_parcel(&mut stream, &parcel);
                 }
                 Type::ProtoError => {
                     println!("Proto Error")

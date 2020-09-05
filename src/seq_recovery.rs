@@ -21,7 +21,6 @@ pub fn seq_recovery(state: Arc<RwLock<State>>) {
 
     // begin parallel scope
     neighbour_list.into_par_iter().for_each_with(sender, |s, addr| {
-        let _state_ref = state.clone();
         recover(&addr, &req, s);
     });
     // end parallel scope

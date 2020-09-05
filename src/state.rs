@@ -46,7 +46,7 @@ impl State {
         State { self_node_information, neighbours, sequence: 0  }
     }
 
-    pub fn get_size(&self) -> usize {
+    pub fn get_cluster_size(&self) -> usize {
         return self.neighbours.len();
     }
 
