@@ -78,7 +78,13 @@ pub fn listener_thread(_recv: Receiver<ThreadSignal>, state: Arc<RwLock<State>>,
                     let seq = state.sequence;
                     let parcel = ProtoParcel::seq_res(state.self_node_information.id, seq);
                     drop(state);
-
+                    write_parcel(&mut stream, &parcel);
+                }
+                Type::Ping => {
+                    println!("Received Ping from node {}", parcel.id);
+                    let mut state = state_ref.write().unwrap(); // acquire write lock
+                    let parcel = ProtoParcel::pong(state.self_node_information.id);
+                    drop(state);
                     write_parcel(&mut stream, &parcel);
                 }
                 Type::ProtoError => {
