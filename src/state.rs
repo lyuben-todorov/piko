@@ -66,6 +66,10 @@ impl State {
 
         neighbour_list
     }
+
+    pub fn get_neighbour_keys(&self) -> Vec<u16> {
+        self.neighbours.keys().cloned().collect()
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone)]

@@ -8,22 +8,23 @@ use crate::net::{read_parcel, write_parcel};
 use clokwerk::{Scheduler, TimeUnits};
 use std::time::Duration;
 use crate::internal::ThreadSignal;
+use std::collections::HashMap;
 
 
 pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, _timeout: u32, rx: Receiver<ThreadSignal>) {
     let mut scheduler = Scheduler::new();
+    // map node id to amount of timeouts
+    let mut timeouts: HashMap<u16, u8> = HashMap::new();
 
     scheduler.every(heart_rate.seconds()).run(move || {
         let state_ref = state.read().unwrap();
-
+        for key in  state_ref.get_neighbour_keys() {
+            if !timeouts.contains_key(&key) { timeouts.insert(key, 0); }
+        }
         if state_ref.self_node_information.mode == Mode::Wrk {
             let (sender, receiver): (Sender<bool>, Receiver<bool>) = mpsc::channel(); // setup channel for results
 
-            let neighbour_list: Vec<Node> = state_ref.neighbours.values().cloned().collect();
-
-            let neighbour_list: Vec<SocketAddr> = neighbour_list.iter().map(|node| { node.host }).collect(); // get socketaddrs
-
-            let _id = state_ref.self_node_information.id;
+            let neighbour_list: Vec<SocketAddr> = state_ref.get_neighbour_addrs();
             drop(state_ref); // drop lock
 
             let req = ProtoParcel::ping();
@@ -34,8 +35,7 @@ pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, _timeout: u32, rx: 
             });
             // end parallel scope
 
-            for _result in receiver.iter() {
-            }
+            for _result in receiver.iter() {}
         } else {
             return;
         }
