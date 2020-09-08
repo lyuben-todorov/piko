@@ -16,7 +16,7 @@ pub fn wrk(state: Arc<RwLock<State>>, _sender: Sender<ThreadSignal>) {
     }
 
     drop(state_ref);
-    let (monitor_sender, monitor_receiver): (Sender<ThreadSignal>, Receiver<ThreadSignal>) = mpsc::channel();
+    let (_monitor_sender, monitor_receiver): (Sender<ThreadSignal>, Receiver<ThreadSignal>) = mpsc::channel();
 
     // start heartbeat thread
     rayon::spawn(move || heartbeat(state.clone(), 5, 5, monitor_receiver));

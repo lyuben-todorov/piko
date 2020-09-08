@@ -2,15 +2,15 @@ use crate::state::{State, Mode, Node};
 use std::sync::{RwLock, Arc, mpsc};
 use std::sync::mpsc::{Sender, Receiver};
 use std::net::{SocketAddr, TcpStream};
-use crate::proto::{ProtoParcel, Type, Body};
+use crate::proto::{ProtoParcel, Type};
 use rayon::prelude::*;
 use crate::net::{read_parcel, write_parcel};
-use clokwerk::{Scheduler, TimeUnits, ScheduleHandle};
+use clokwerk::{Scheduler, TimeUnits};
 use std::time::Duration;
 use crate::internal::ThreadSignal;
 
 
-pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, timeout: u32, rx: Receiver<ThreadSignal>) {
+pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, _timeout: u32, rx: Receiver<ThreadSignal>) {
     let mut scheduler = Scheduler::new();
 
     scheduler.every(heart_rate.seconds()).run(move || {
@@ -23,7 +23,7 @@ pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, timeout: u32, rx: R
 
             let neighbour_list: Vec<SocketAddr> = neighbour_list.iter().map(|node| { node.host }).collect(); // get socketaddrs
 
-            let id = state_ref.self_node_information.id;
+            let _id = state_ref.self_node_information.id;
             drop(state_ref); // drop lock
 
             let req = ProtoParcel::ping();
@@ -34,14 +34,14 @@ pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, timeout: u32, rx: R
             });
             // end parallel scope
 
-            for result in receiver.iter() {
+            for _result in receiver.iter() {
             }
         } else {
             return;
         }
     });
 
-    let mut thread_handle = scheduler.watch_thread(Duration::from_millis(100));
+    let thread_handle = scheduler.watch_thread(Duration::from_millis(100));
 
     println!("Started heartbeat thread!");
 

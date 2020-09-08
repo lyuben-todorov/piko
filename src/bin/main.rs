@@ -25,9 +25,9 @@ use piko::net::listener_thread;
 use std::sync::{Arc, mpsc, RwLock};
 use std::sync::mpsc::{Sender, Receiver};
 use piko::wrk::wrk;
-use piko::seq_recovery::seq_recovery;
+
 use piko::internal::ThreadSignal;
-use piko::proto::{ProtoParcel, set_sender_id};
+use piko::proto::{set_sender_id};
 
 
 fn main() {
