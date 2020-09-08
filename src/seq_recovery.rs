@@ -6,7 +6,7 @@ use std::net::{SocketAddr, TcpStream};
 use crate::proto::{ProtoParcel, Type, Body};
 use crate::net::{write_parcel, read_parcel};
 
-pub fn seq_recovery(state: Arc<RwLock<State>>) {
+pub fn seq_recovery(state: Arc<RwLock<State>>) -> u8 {
 
     let (sender, receiver): (Sender<u8>, Receiver<u8>) = mpsc::channel(); // setup channel for results
 
@@ -27,9 +27,7 @@ pub fn seq_recovery(state: Arc<RwLock<State>>) {
 
     let max_seq = receiver.iter().max_by_key(|seq| *seq).unwrap();
     println!("Recovered sequence number {}", max_seq);
-    let mut state = state.write().unwrap();
-    state.sequence = max_seq;
-    state.change_mode(Mode::Wrk);
+    max_seq
 }
 
 fn recover(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<u8>) {

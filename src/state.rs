@@ -19,7 +19,6 @@ pub enum Mode {
     Err = 3,
     Panic = 4,
     Shutdown = 5,
-    SeqRecovery = 6,
 }
 
 impl Display for Mode {
@@ -30,7 +29,6 @@ impl Display for Mode {
             Mode::Err => write!(f, "{}", "Err"),
             Mode::Panic => write!(f, "{}", "Panic"),
             Mode::Shutdown => write!(f, "{}", "Shutdown"),
-            Mode::SeqRecovery => write!(f, "{}", "SeqRecovery")
         }
     }
 }

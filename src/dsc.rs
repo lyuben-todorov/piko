@@ -10,7 +10,6 @@ use rayon::prelude::*;
 
 use crate::net::{write_parcel, read_parcel};
 
-
 // Start discovery routine
 pub fn dsc(state: Arc<RwLock<State>>, neighbour_list: &Vec<SocketAddr>) {
     // Skip discovery

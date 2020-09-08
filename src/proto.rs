@@ -17,6 +17,8 @@ pub enum Type {
     SeqReq = 3,
     SeqRes = 4,
     StateChange = 5,
+    Ping = 6,
+    Pong = 7,
 }
 
 // Enumeration over the types of protocol errors.
@@ -35,7 +37,9 @@ impl Display for Type {
             Type::SeqReq => write!(f, "{}", "SeqReq"),
             Type::SeqRes => write!(f, "{}", "SeqRes"),
             Type::ProtoError => write!(f, "{}", "Err"),
-            Type::StateChange => write!(f, "{}", "StateChange")
+            Type::StateChange => write!(f, "{}", "StateChange"),
+            Type::Ping => write!(f, "{}", "Ping"),
+            Type::Pong => write!(f, "{}", "Pong")
         }
     }
 }
@@ -88,5 +92,11 @@ impl ProtoParcel {
     }
     pub fn state_change(id: u16, mode: Mode) -> ProtoParcel {
         ProtoParcel { is_response: false, parcel_type: Type::StateChange, id, size: 0, body: Body::StateChange { mode } }
+    }
+    pub fn ping(id: u16) -> ProtoParcel {
+        ProtoParcel { is_response: false, parcel_type: Type::Ping, id, size: 0, body: Body::Empty }
+    }
+    pub fn pong(id: u16) -> ProtoParcel {
+        ProtoParcel { is_response: true, parcel_type: Type::Pong, id, size: 0, body: Body::Empty }
     }
 }

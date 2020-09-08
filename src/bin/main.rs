@@ -113,10 +113,6 @@ fn main() {
                 drop(state_lock);
                 dsc(state.clone(), &neighbour_socket_addresses);
             }
-            Mode::SeqRecovery => {
-                drop(state_lock);
-                seq_recovery(state.clone());
-            }
             Mode::Wrk => {
                 drop(state_lock);
                 wrk(state.clone(), state_sender.clone());
