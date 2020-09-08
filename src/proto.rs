@@ -101,7 +101,7 @@ pub enum Body {
 #[derive(Serialize, Deserialize)]
 pub struct ProtoParcel {
     // id of message
-    pub id: u128,
+    pub id: u64,
     // id of sender
     pub sender_id: u16,
     // whether or not packet is a response
@@ -193,8 +193,8 @@ impl ProtoParcel {
     }
 }
 
-pub fn generate_id() -> u128 {
-    let id = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
-    let random: u128 = random();
+pub fn generate_id() -> u64 {
+    let id = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
+    let random: u64 = random();
     id ^ random
 }
