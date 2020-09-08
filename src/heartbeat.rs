@@ -1,4 +1,4 @@
-use crate::state::{State, Mode, Node};
+use crate::state::{State, Mode};
 use std::sync::{RwLock, Arc, mpsc};
 use std::sync::mpsc::{Sender, Receiver};
 use std::net::{SocketAddr, TcpStream};
