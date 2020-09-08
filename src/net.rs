@@ -58,12 +58,10 @@ pub fn listener_thread(_recv: Receiver<ThreadSignal>, state: Arc<RwLock<State>>,
                         state.add_neighbour(identity); // add node to state after neighbours are cloned
                         drop(state); // drop write lock before tcp writes
 
-                        let id: u16 = self_node.id;
-
                         neighbours.extend_from_slice(state_neighbours.as_slice());
                         neighbours.push(self_node);
 
-                        let parcel = ProtoParcel::dsc_res(id, neighbours);
+                        let parcel = ProtoParcel::dsc_res(neighbours);
 
                         write_parcel(&mut stream, &parcel);
                     } else {
@@ -74,16 +72,16 @@ pub fn listener_thread(_recv: Receiver<ThreadSignal>, state: Arc<RwLock<State>>,
 
                 Type::SeqReq => {
                     println!("Received SeqReq from node {}", parcel.id);
-                    let mut state = state_ref.write().unwrap(); // acquire write lock
+                    let state = state_ref.write().unwrap(); // acquire write lock
                     let seq = state.sequence;
-                    let parcel = ProtoParcel::seq_res(state.self_node_information.id, seq);
+                    let parcel = ProtoParcel::seq_res(seq);
                     drop(state);
                     write_parcel(&mut stream, &parcel);
                 }
                 Type::Ping => {
                     println!("Received Ping from node {}", parcel.id);
-                    let mut state = state_ref.write().unwrap(); // acquire write lock
-                    let parcel = ProtoParcel::pong(state.self_node_information.id);
+                    let state = state_ref.write().unwrap(); // acquire write lock
+                    let parcel = ProtoParcel::pong();
                     drop(state);
                     write_parcel(&mut stream, &parcel);
                 }

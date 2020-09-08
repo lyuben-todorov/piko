@@ -10,7 +10,7 @@ pub fn seq_recovery(neighbour_list: Vec<SocketAddr>, id: u16) -> u8 {
 
     let (sender, receiver): (Sender<u8>, Receiver<u8>) = mpsc::channel(); // setup channel for results
 
-    let req = ProtoParcel::seq_req(id);
+    let req = ProtoParcel::seq_req();
 
     // begin parallel scope
     neighbour_list.into_par_iter().for_each_with(sender, |s, addr| {

@@ -408,6 +408,7 @@ dependencies = [
  "clokwerk",
  "config",
  "glob",
+ "lazy_static",
  "num",
  "num-derive",
  "num-traits 0.2.12",

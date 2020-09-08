@@ -26,7 +26,7 @@ pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, timeout: u32, rx: R
             let id = state_ref.self_node_information.id;
             drop(state_ref); // drop lock
 
-            let req = ProtoParcel::ping(id);
+            let req = ProtoParcel::ping();
 
             // begin parallel scope
             neighbour_list.into_par_iter().for_each_with(sender, |s, addr| {

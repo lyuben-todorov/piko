@@ -5,10 +5,24 @@ use crate::state::{Node, Mode};
 use std::fmt::Display;
 
 use serde::{Serialize, Deserialize};
-use std::time::SystemTime;
+use std::time::{SystemTime, UNIX_EPOCH};
+use bytes::Bytes;
+use rand::{random, Rng};
+use rand::prelude::*;
+use std::sync::Mutex;
+use lazy_static::lazy_static;
+
 
 static PROTO_VERSION: &str = "1.0";
 
+lazy_static! {
+    static ref SENDER: Mutex<u16> = Mutex::new(0);
+}
+
+pub fn set_sender_id(id: u16) {
+    let mut _id = SENDER.lock().unwrap();
+    *_id = id;
+}
 // Enumeration over the types of protocol messages
 #[derive(FromPrimitive, ToPrimitive, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Type {
@@ -20,6 +34,10 @@ pub enum Type {
     StateChange = 5,
     Ping = 6,
     Pong = 7,
+    SequenceLock = 8,
+    Message = 9,
+    Ack = 10,
+
 }
 
 // Enumeration over the types of protocol errors.
@@ -40,7 +58,10 @@ impl Display for Type {
             Type::ProtoError => write!(f, "{}", "Err"),
             Type::StateChange => write!(f, "{}", "StateChange"),
             Type::Ping => write!(f, "{}", "Ping"),
-            Type::Pong => write!(f, "{}", "Pong")
+            Type::Pong => write!(f, "{}", "Pong"),
+            Type::SequenceLock => write!(f, "{}", "SequenceLock"),
+            Type::Message => write!(f, "{}", "Message"),
+            Type::Ack => write!(f, "{}", "Ack"),
         }
     }
 }
@@ -49,29 +70,44 @@ impl Display for Type {
 #[derive(Serialize, Deserialize)]
 pub enum Body {
     Empty,
+
     DscReq {
         identity: Node
     },
+
     DscRes {
         neighbours: Vec<Node>,
     },
+
     SeqRes {
         seq_number: u8
     },
+
     StateChange {
         mode: Mode
+    },
+
+    Message {
+        bytes: Vec<u8>,
+        sender: u16,
+    },
+
+    Ack {
+        message_id: u64
     },
 }
 
 
 #[derive(Serialize, Deserialize)]
 pub struct ProtoParcel {
+    // id of message
+    pub id: u128,
+    // id of sender
+    pub sender_id: u16,
     // whether or not packet is a response
     pub is_response: bool,
     // type of packet
     pub parcel_type: Type,
-    // id of sender node
-    pub id: u16,
     // size of application-specific data in bytes
     pub size: u16,
     // message body
@@ -80,24 +116,85 @@ pub struct ProtoParcel {
 
 impl ProtoParcel {
     pub fn dsc_req(self_node_information: Node) -> ProtoParcel {
-        ProtoParcel { is_response: false, parcel_type: Type::DscReq, id: self_node_information.id, size: 0, body: Body::DscReq { identity: self_node_information } }
+        ProtoParcel {
+            id: generate_id(),
+            sender_id: *SENDER.lock().unwrap(),
+            is_response: false,
+            parcel_type: Type::DscReq,
+            size: 0,
+            body: Body::DscReq { identity: self_node_information },
+        }
     }
-    pub fn dsc_res(id: u16, neighbours_information: Vec<Node>) -> ProtoParcel {
-        ProtoParcel { is_response: true, parcel_type: Type::DscRes, id, size: 0, body: Body::DscRes { neighbours: neighbours_information } }
+
+    pub fn dsc_res(neighbours_information: Vec<Node>) -> ProtoParcel {
+        ProtoParcel {
+            id: generate_id(),
+            sender_id: *SENDER.lock().unwrap(),
+            is_response: true,
+            parcel_type: Type::DscRes,
+            size: 0,
+            body: Body::DscRes { neighbours: neighbours_information },
+        }
     }
-    pub fn seq_req(id: u16) -> ProtoParcel {
-        ProtoParcel { is_response: false, parcel_type: Type::SeqReq, id, size: 0, body: Body::Empty }
+
+    pub fn seq_req() -> ProtoParcel {
+        ProtoParcel {
+            id: generate_id(),
+            sender_id: *SENDER.lock().unwrap(),
+            is_response: false,
+            parcel_type: Type::SeqReq,
+            size: 0,
+            body: Body::Empty,
+        }
     }
-    pub fn seq_res(id: u16, seq_number: u8) -> ProtoParcel {
-        ProtoParcel { is_response: true, parcel_type: Type::SeqRes, id, size: 0, body: Body::SeqRes { seq_number } }
+
+    pub fn seq_res(seq_number: u8) -> ProtoParcel {
+        ProtoParcel {
+            id: generate_id(),
+            sender_id: *SENDER.lock().unwrap(),
+            is_response: true,
+            parcel_type: Type::SeqRes,
+            size: 0,
+            body: Body::SeqRes { seq_number },
+        }
     }
-    pub fn state_change(id: u16, mode: Mode) -> ProtoParcel {
-        ProtoParcel { is_response: false, parcel_type: Type::StateChange, id, size: 0, body: Body::StateChange { mode } }
+
+    pub fn state_change(mode: Mode) -> ProtoParcel {
+        ProtoParcel {
+            id: generate_id(),
+            sender_id: *SENDER.lock().unwrap(),
+            is_response: false,
+            parcel_type: Type::StateChange,
+            size: 0,
+            body: Body::StateChange { mode },
+        }
     }
-    pub fn ping(id: u16) -> ProtoParcel {
-        ProtoParcel { is_response: false, parcel_type: Type::Ping, id, size: 0, body: Body::Empty }
+
+    pub fn ping() -> ProtoParcel {
+        ProtoParcel {
+            id: generate_id(),
+            sender_id: *SENDER.lock().unwrap(),
+            is_response: false,
+            parcel_type: Type::Ping,
+            size: 0,
+            body: Body::Empty,
+        }
     }
-    pub fn pong(id: u16) -> ProtoParcel {
-        ProtoParcel { is_response: true, parcel_type: Type::Pong, id, size: 0, body: Body::Empty }
+
+    pub fn pong() -> ProtoParcel {
+        ProtoParcel {
+            id: generate_id(),
+            sender_id: *SENDER.lock().unwrap(),
+            is_response: true,
+            parcel_type: Type::Pong,
+            size: 0,
+            body: Body::Empty,
+        }
     }
+}
+
+pub fn generate_id() -> u128 {
+    let id = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
+    let random: u128 = random();
+    id ^ random
 }

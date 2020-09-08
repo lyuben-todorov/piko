@@ -3,10 +3,11 @@ extern crate config;
 extern crate rayon;
 extern crate bit_vec;
 extern crate sha2;
-extern crate byteorder;
 extern crate bytes;
 extern crate num;
 extern crate num_derive;
+#[macro_use(lazy_static)]
+extern crate lazy_static;
 
 use config::*;
 
@@ -26,6 +27,7 @@ use std::sync::mpsc::{Sender, Receiver};
 use piko::wrk::wrk;
 use piko::seq_recovery::seq_recovery;
 use piko::internal::ThreadSignal;
+use piko::proto::{ProtoParcel, set_sender_id};
 
 
 fn main() {
@@ -73,10 +75,8 @@ fn main() {
         neighbour_socket_addresses.push(socket);
     }
 
-
     rayon::ThreadPoolBuilder::new().num_threads(thread_count as usize).build_global().unwrap();
     println!("Setting worker pool count to {}.", thread_count);
-
 
     let addr = Ipv4Addr::from_str(&host_name).expect("Error parsing host name");
     let address = SocketAddr::from(SocketAddrV4::new(addr, port as u16));
@@ -90,8 +90,9 @@ fn main() {
     };
 
 
-    let neighbours = HashMap::<String, Node>::new();
+    let neighbours = HashMap::<u16, Node>::new();
     let self_node_information = Node::new(name, Mode::Dsc, address);
+    set_sender_id(self_node_information.id);
 
 
     let (state_sender, listener_receiver): (Sender<ThreadSignal>, Receiver<ThreadSignal>) = mpsc::channel();
@@ -124,6 +125,7 @@ fn main() {
                 println!("Bye!");
                 break;
             }
+            _ => {}
         }
     }
 

@@ -20,6 +20,7 @@ pub enum Mode {
     Err = 3,
     Panic = 4,
     Shutdown = 5,
+    TimedOut = 6,
 }
 
 impl Display for Mode {
@@ -30,19 +31,20 @@ impl Display for Mode {
             Mode::Err => write!(f, "{}", "Err"),
             Mode::Panic => write!(f, "{}", "Panic"),
             Mode::Shutdown => write!(f, "{}", "Shutdown"),
+            Mode::TimedOut => write!(f, "{}", "TimedOut")
         }
     }
 }
 
 pub struct State {
     pub self_node_information: Node,
-    pub neighbours: HashMap<String, Node>,
+    pub neighbours: HashMap<u16, Node>,
     pub sequence: u8,
 }
 
 impl State {
-    pub fn new(self_node_information: Node, neighbours: HashMap<String, Node>) -> Self {
-        State { self_node_information, neighbours, sequence: 0  }
+    pub fn new(self_node_information: Node, neighbours: HashMap<u16, Node>) -> Self {
+        State { self_node_information, neighbours, sequence: 0 }
     }
 
     pub fn get_cluster_size(&self) -> usize {
@@ -50,7 +52,7 @@ impl State {
     }
 
     pub fn add_neighbour(&mut self, node: Node) {
-        self.neighbours.insert(node.name.clone(), node);
+        self.neighbours.insert(node.id, node);
     }
 
     pub fn change_mode(&mut self, mode: Mode) {
