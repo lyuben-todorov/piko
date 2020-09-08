@@ -47,7 +47,7 @@ pub fn dsc(state: Arc<RwLock<State>>, neighbour_list: &Vec<SocketAddr>) {
         println!("Found {}!", neighbour.name);
         state.add_neighbour(neighbour);
     }
-    state.change_mode(Mode::SeqRecovery);
+    state.change_mode(Mode::Wrk);
 }
 
 // Request/response on same tcp stream

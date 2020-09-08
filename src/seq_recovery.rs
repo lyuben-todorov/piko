@@ -31,7 +31,7 @@ pub fn seq_recovery(state: Arc<RwLock<State>>) -> u8 {
 }
 
 fn recover(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<u8>) {
-    println!("Connecting to {}", host);
+    println!("Recovering sequence from {}", host);
 
     let mut tcp_stream = match TcpStream::connect(host) {
         Ok(stream) => stream,
@@ -54,7 +54,7 @@ fn recover(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<u8>) {
 
         Type::ProtoError => {}
         _ => {
-            println!("Unexpected response type to discovery request, {}", res_parcel.parcel_type);
+            println!("Unexpected response type to SeqReq, {}", res_parcel.parcel_type);
             return;
         }
     }

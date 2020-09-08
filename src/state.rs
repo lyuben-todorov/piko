@@ -10,9 +10,10 @@ use std::fmt::Display;
 use serde::export::Formatter;
 use std::fmt;
 use std::net::SocketAddr;
+use crate::state::Mode::Wrk;
 
 
-#[derive(FromPrimitive, ToPrimitive, Deserialize, Serialize, Clone)]
+#[derive(FromPrimitive, ToPrimitive, Deserialize, Serialize, Clone, PartialEq)]
 pub enum Mode {
     Wrk = 1,
     Dsc = 2,
@@ -54,6 +55,14 @@ impl State {
 
     pub fn change_mode(&mut self, mode: Mode) {
         self.self_node_information.mode = mode;
+    }
+
+    pub fn get_neighbour_addrs(&self) -> Vec<SocketAddr> {
+        let neighbour_list: Vec<Node> = self.neighbours.values().filter(|val| val.mode == Wrk).cloned().collect();
+
+        let neighbour_list: Vec<SocketAddr> = neighbour_list.iter().map(|node| { node.host }).collect(); // get socketaddrs
+
+        neighbour_list
     }
 }
 

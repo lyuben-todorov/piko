@@ -7,6 +7,7 @@ use std::sync::{Arc, RwLock};
 use std::io::{Read, Write};
 use crate::proto::{ProtoParcel, Type, Body};
 use byteorder::{ReadBytesExt, WriteBytesExt};
+use crate::internal::ThreadSignal;
 
 
 pub fn read_parcel(stream: &mut TcpStream) -> ProtoParcel {
@@ -31,7 +32,7 @@ pub fn write_parcel(stream: &mut TcpStream, parcel: &ProtoParcel) {
     stream.write_all(buf);
 }
 
-pub fn listener_thread(_recv: Receiver<u32>, state: Arc<RwLock<State>>, socket: TcpListener) {
+pub fn listener_thread(_recv: Receiver<ThreadSignal>, state: Arc<RwLock<State>>, socket: TcpListener) {
     println!("Started Listener thread!");
 
     for stream in socket.incoming() {

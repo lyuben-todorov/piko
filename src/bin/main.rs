@@ -25,6 +25,7 @@ use std::sync::{Arc, mpsc, RwLock};
 use std::sync::mpsc::{Sender, Receiver};
 use piko::wrk::wrk;
 use piko::seq_recovery::seq_recovery;
+use piko::internal::ThreadSignal;
 
 
 fn main() {
@@ -93,15 +94,15 @@ fn main() {
     let self_node_information = Node::new(name, Mode::Dsc, address);
 
 
-    let (state_sender, listener_receiver): (Sender<u32>, Receiver<u32>) = mpsc::channel();
+    let (state_sender, listener_receiver): (Sender<ThreadSignal>, Receiver<ThreadSignal>) = mpsc::channel();
 
     let state_inner = State::new(self_node_information, neighbours);
-    let state = Arc::new(RwLock::new(state_inner)); // pass sender to state
+    let state = Arc::new(RwLock::new(state_inner));
 
+    // start listener thread
     let state_ref = state.clone();
     rayon::spawn(move || listener_thread(listener_receiver, state_ref, listener));
-    // pass receiver to listener thread
-
+    // start monitor
     println!("Started main worker thread!");
 
     loop {
