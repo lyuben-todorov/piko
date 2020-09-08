@@ -10,7 +10,7 @@ pub fn wrk(state: Arc<RwLock<State>>, _sender: Sender<ThreadSignal>) {
     let mut state_ref = state.write().unwrap();
     if state_ref.get_cluster_size() > 0 {
         println!("Acquiring sequence number");
-        let seq_num = seq_recovery(state.clone());
+        let seq_num = seq_recovery(state_ref.get_neighbour_addrs(), state_ref.self_node_information.id);
         state_ref.sequence = seq_num;
         println!("Starting from sequence number: {}", seq_num);
     }

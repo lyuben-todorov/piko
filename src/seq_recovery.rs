@@ -1,4 +1,4 @@
-use crate::state::{State, Node, Mode};
+use crate::state::{ Node, Mode};
 use std::sync::{RwLock, Arc, mpsc};
 use std::sync::mpsc::{Sender, Receiver};
 use rayon::prelude::*;
@@ -6,16 +6,9 @@ use std::net::{SocketAddr, TcpStream};
 use crate::proto::{ProtoParcel, Type, Body};
 use crate::net::{write_parcel, read_parcel};
 
-pub fn seq_recovery(state: Arc<RwLock<State>>) -> u8 {
+pub fn seq_recovery(neighbour_list: Vec<SocketAddr>, id: u16) -> u8 {
 
     let (sender, receiver): (Sender<u8>, Receiver<u8>) = mpsc::channel(); // setup channel for results
-
-    let state_ref = state.read().unwrap();
-    let neighbour_list: Vec<Node> = state_ref.neighbours.values().cloned().collect();
-    let neighbour_list: Vec<SocketAddr> = neighbour_list.iter().map(|node| { node.host }).collect(); // get socketaddrs
-
-    let id = state_ref.self_node_information.id;
-    drop(state_ref); // drop lock
 
     let req = ProtoParcel::seq_req(id);
 
