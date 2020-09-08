@@ -35,9 +35,6 @@ pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, timeout: u32, rx: R
             // end parallel scope
 
             for result in receiver.iter() {
-                if result {
-                    println!("{}", result);
-                }
             }
         } else {
             return;
