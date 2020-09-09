@@ -8,7 +8,7 @@ use crate::state::Mode;
 use crate::internal::ThreadSignal;
 
 pub fn push_state(neighbour_list: &Vec<SocketAddr>, state: Mode) {
-    let (sender, receiver): (Sender<ThreadSignal>, Receiver<ThreadSignal>) = mpsc::channel(); // setup channel for results
+    let (sender, _receiver): (Sender<ThreadSignal>, Receiver<ThreadSignal>) = mpsc::channel(); // setup channel for results
 
     let req = ProtoParcel::state_change(state);
 
@@ -28,7 +28,7 @@ fn update(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<ThreadSig
             return;
         }
     };
-    let m_id = (req_parcel.id);
+    let m_id = req_parcel.id;
 
     write_parcel(&mut tcp_stream, &req_parcel);
 
