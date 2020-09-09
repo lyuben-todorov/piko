@@ -43,7 +43,6 @@ pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, _timeout: u32, rx: 
             // end parallel scope
 
             for result in receiver.iter() {
-                println!("{}:{}", result.0, result.1);
                 if !result.1 {
                     let mut entry = timeouts.entry(result.0).or_insert(0);
                     *entry += 1;
