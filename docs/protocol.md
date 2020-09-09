@@ -1,27 +1,27 @@
 # Protocol
 The goal of this protocol is to consistently _verify_ the sequence of an unbounded stream of events. This excludes    
-storage. E.g node A B and C work in a cluster, A receives some message x1. The job of A is to distribute x1 to its    
-neighbours B and C and receive acknowledgements that the message has been processed, while maintaining message order. 
+storage.
 
 ### Discovery phase  
-A node called "Ivan" starts as DSC, looking for other nodes on the cluster. Ivan sends a `DscReq` to its pre-defined    
-list of neighbours. The `DscReq` contains the sender's information. Each of the
-nodes responding to a `DscReq` should send a `DscRes` with their list of neighbouring nodes and general status `DSC`, `WRK`, `ERR`.    
-Each of the receivers adds the sender, Ivan, to their list. Ivan adds each of the received hosts to his list. 
-The only exception is when the node's neighbour list is empty, in which case it goes straight into `WRK`.
+A node starts as `Dsc`, looking for other nodes on the cluster. It sends a `DscReq` to its pre-defined 
+list of neighbours. The `DscReq` contains the sender's information. Each of the nodes responding to a `DscReq` 
+should send a `DscRes` with their list of neighbouring nodes and general status. Each of the receivers adds the sender 
+to their list. The sender adds each of the received hosts to his list. The only exception is when the starting 
+node's neighbour list is empty, in which case it goes straight into `Wrk`.
 
 ### Sequence recovery
-After discovery, Ivan can send a `SeqRes` to each of its neighbours. Each one responds with their `SEQ` number.
+After discovery, a node can send a `SeqRes` to each of its neighbours. Each one responds with their `SEQ` number.
+
+### Work phase
+A worker keeps track of its neighbours by sending a a heartbeat to each of its working neighbours on a specified timeout. 
+If a node goes silent for more a number of repeated unacknowledged pings, it is removed from the cluster.
 
 ### State change
 A node can send a `StateChange` parcel containing its new state so that its neighbours can locally update it.
 
-### Work phase
-A worker is required to send a heartbeat to each (for now) of its working neighbours each 3s. If a node goes silent for more     
-than `5`, seconds, it is removed from the cluster.
-
 ### Protocol format 
-Protocol operates under TCP. A protocol 'packet' is referred to as parcel. The encoding we're using is CBOR. The parcel looks like this:     
+Protocol operates under TCP. A protocol 'packet' is referred to as parcel. The encoding we're using is CBOR. 
+The parcel looks like this:     
 ```rust
 pub struct ProtoParcel {
     // whether or not packet is a response
