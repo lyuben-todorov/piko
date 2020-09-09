@@ -13,7 +13,7 @@ use crate::internal::ThreadSignal;
 pub fn read_parcel(stream: &mut TcpStream) -> ProtoParcel {
     let count = stream.read_u8().unwrap();
 
-    println!("Expecting {} bytes", count);
+    // println!("Expecting {} bytes", count);
 
     let mut buf = vec![0u8; count as usize];
     stream.read_exact(&mut buf);
@@ -27,7 +27,7 @@ pub fn write_parcel(stream: &mut TcpStream, parcel: &ProtoParcel) {
     let buf = parcel.as_slice();
     let count = buf.len();
 
-    println!("Writing {} bytes", count);
+    // println!("Writing {} bytes", count);
     stream.write_u8(count as u8);
     stream.write_all(buf);
 }
@@ -46,7 +46,7 @@ pub fn listener_thread(_recv: Receiver<ThreadSignal>, state: Arc<RwLock<State>>,
             match parcel.parcel_type {
                 Type::DscReq => {
                     if let Body::DscReq { identity } = parcel.body {
-                        println!("Received DscReq from node {}", parcel.id);
+                        println!("Received DscReq with id {} from node {}", parcel.id, parcel.sender_id);
 
                         let mut neighbours: Vec<Node> = Vec::new();
 
@@ -71,7 +71,7 @@ pub fn listener_thread(_recv: Receiver<ThreadSignal>, state: Arc<RwLock<State>>,
                 }
 
                 Type::SeqReq => {
-                    println!("Received SeqReq from node {}", parcel.id);
+                    println!("Received SeqReq with id {} from node {}", parcel.id, parcel.sender_id);
                     let state = state_ref.write().unwrap(); // acquire write lock
                     let seq = state.sequence;
                     let parcel = ProtoParcel::seq_res(seq);
@@ -79,7 +79,7 @@ pub fn listener_thread(_recv: Receiver<ThreadSignal>, state: Arc<RwLock<State>>,
                     write_parcel(&mut stream, &parcel);
                 }
                 Type::Ping => {
-                    println!("Received Ping from node {}", parcel.id);
+                    println!("Received Ping with id {} from node {}", parcel.id, parcel.sender_id);
                     let state = state_ref.write().unwrap(); // acquire write lock
                     let parcel = ProtoParcel::pong();
                     drop(state);

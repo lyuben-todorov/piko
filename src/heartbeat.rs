@@ -1,4 +1,4 @@
-use crate::state::{State, Mode};
+use crate::state::{State, Mode, Node};
 use std::sync::{RwLock, Arc, mpsc};
 use std::sync::mpsc::{Sender, Receiver};
 use std::net::{SocketAddr, TcpStream};
@@ -8,7 +8,7 @@ use crate::net::{read_parcel, write_parcel};
 use clokwerk::{Scheduler, TimeUnits};
 use std::time::Duration;
 use crate::internal::ThreadSignal;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 
 pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, _timeout: u32, rx: Receiver<ThreadSignal>) {
@@ -18,13 +18,20 @@ pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, _timeout: u32, rx: 
 
     scheduler.every(heart_rate.seconds()).run(move || {
         let state_ref = state.read().unwrap();
-        for key in  state_ref.get_neighbour_keys() {
-            if !timeouts.contains_key(&key) { timeouts.insert(key, 0); }
-        }
-        if state_ref.self_node_information.mode == Mode::Wrk {
-            let (sender, receiver): (Sender<bool>, Receiver<bool>) = mpsc::channel(); // setup channel for results
+        let new_keys: HashSet<u16> = state_ref.get_neighbour_keys();
 
-            let neighbour_list: Vec<SocketAddr> = state_ref.get_neighbour_addrs();
+        // Add new keys
+        for key in new_keys {
+            if !timeouts.contains_key(&key) {
+                println!("{}",key);
+                timeouts.insert(key, 0);
+            }
+        }
+
+        if state_ref.self_node_information.mode == Mode::Wrk {
+            let (sender, receiver): (Sender<(u16, bool)>, Receiver<(u16, bool)>) = mpsc::channel(); // setup channel for results
+
+            let neighbour_list: Vec<Node> = state_ref.get_active_neighbours();
             drop(state_ref); // drop lock
 
             let req = ProtoParcel::ping();
@@ -35,7 +42,16 @@ pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, _timeout: u32, rx: 
             });
             // end parallel scope
 
-            for _result in receiver.iter() {}
+            for result in receiver.iter() {
+                println!("{}:{}", result.0, result.1);
+                if !result.1 {
+                    let mut entry = timeouts.entry(result.0).or_insert(0);
+                    *entry += 1;
+                    if *entry > 5 { println!("Node with id {} timed out for {}", result.0, entry) }
+                } else {
+                    timeouts.insert(result.0, 0);
+                }
+            }
         } else {
             return;
         }
@@ -59,14 +75,14 @@ pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, _timeout: u32, rx: 
     }
 }
 
-fn ping(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<bool>) {
-    println!("Sending heartbeat to {}", host);
+fn ping(node: &Node, req_parcel: &ProtoParcel, tx: &mut Sender<(u16, bool)>) {
+    println!("Sending heartbeat to {}", node.id);
 
-    let mut tcp_stream = match TcpStream::connect(host) {
+    let mut tcp_stream = match TcpStream::connect(node.host) {
         Ok(stream) => stream,
         Err(err) => {
-            println!("{}: {}", err, host);
-            tx.send(false).unwrap();
+            println!("{}: {}", err, node.id);
+            tx.send((node.id, false)).unwrap();
             return;
         }
     };
@@ -74,12 +90,12 @@ fn ping(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<bool>) {
     let res_parcel = read_parcel(&mut tcp_stream);
     match res_parcel.parcel_type {
         Type::Pong => {
-            tx.send(true).unwrap();
+            tx.send((node.id, true)).unwrap();
         }
         Type::ProtoError => {}
         _ => {
             println!("Unexpected response type to Ping, {}", res_parcel.parcel_type);
-            tx.send(false).unwrap();
+            tx.send((node.id, false)).unwrap();
             return;
         }
     }

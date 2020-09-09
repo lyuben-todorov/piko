@@ -1,4 +1,4 @@
-use std::collections::{HashMap};
+use std::collections::{HashMap, HashSet};
 use sha2::{Sha256, Digest};
 use byteorder::{ReadBytesExt, BigEndian};
 use num_derive::{FromPrimitive, ToPrimitive};
@@ -60,15 +60,19 @@ impl State {
     }
 
     pub fn get_neighbour_addrs(&self) -> Vec<SocketAddr> {
-        let neighbour_list: Vec<Node> = self.neighbours.values().filter(|val| val.mode == Wrk).cloned().collect();
+        let neighbour_list: Vec<Node> = self.get_active_neighbours();
 
         let neighbour_list: Vec<SocketAddr> = neighbour_list.iter().map(|node| { node.host }).collect(); // get socketaddrs
 
         neighbour_list
     }
 
-    pub fn get_neighbour_keys(&self) -> Vec<u16> {
+    pub fn get_neighbour_keys(&self) -> HashSet<u16> {
         self.neighbours.keys().cloned().collect()
+    }
+
+    pub fn get_active_neighbours(&self) -> Vec<Node> {
+        self.neighbours.values().filter(|val| val.mode == Wrk).cloned().collect()
     }
 }
 
