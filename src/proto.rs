@@ -23,6 +23,7 @@ pub fn set_sender_id(id: u16) {
     let mut _id = SENDER.lock().unwrap();
     *_id = id;
 }
+
 // Enumeration over the types of protocol messages
 #[derive(FromPrimitive, ToPrimitive, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Type {
@@ -37,14 +38,6 @@ pub enum Type {
     SequenceLock = 8,
     Message = 9,
     Ack = 10,
-
-}
-
-// Enumeration over the types of protocol errors.
-#[derive(FromPrimitive, ToPrimitive, Debug, PartialEq, Serialize, Deserialize)]
-pub enum ProtoError {
-    BadRes = 1,
-    BadReq = 2,
 
 }
 
@@ -66,6 +59,13 @@ impl Display for Type {
     }
 }
 
+// Enumeration over the types of protocol errors.
+#[derive(FromPrimitive, ToPrimitive, Debug, PartialEq, Serialize, Deserialize)]
+pub enum ProtoError {
+    BadRes = 1,
+    BadReq = 2,
+
+}
 
 #[derive(Serialize, Deserialize)]
 pub enum Body {
@@ -189,6 +189,17 @@ impl ProtoParcel {
             parcel_type: Type::Pong,
             size: 0,
             body: Body::Empty,
+        }
+    }
+
+    pub fn ack(message_id: u64) -> ProtoParcel {
+        ProtoParcel {
+            id: generate_id(),
+            sender_id: *SENDER.lock().unwrap(),
+            is_response: true,
+            parcel_type: Type::Ack,
+            size: 0,
+            body: Body::Ack { message_id },
         }
     }
 }

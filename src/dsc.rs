@@ -44,7 +44,7 @@ pub fn dsc(state: Arc<RwLock<State>>, neighbour_list: &Vec<SocketAddr>) {
     }
     let mut state = state.write().unwrap(); // acquire write lock
     for neighbour in neighbours {
-        println!("Found {}!", neighbour.name);
+        println!("Found {}:{}!", neighbour.name, neighbour.mode);
         state.add_neighbour(neighbour);
     }
     state.change_mode(Mode::Wrk);

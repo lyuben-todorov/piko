@@ -23,7 +23,7 @@ pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, _timeout: u32, rx: 
         // Add new keys
         for key in new_keys {
             if !timeouts.contains_key(&key) {
-                println!("{}",key);
+                println!("Adding {} to monitor",key);
                 timeouts.insert(key, 0);
             }
         }

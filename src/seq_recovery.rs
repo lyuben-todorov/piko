@@ -1,4 +1,3 @@
-
 use std::sync::{mpsc};
 use std::sync::mpsc::{Sender, Receiver};
 use rayon::prelude::*;
@@ -6,8 +5,7 @@ use std::net::{SocketAddr, TcpStream};
 use crate::proto::{ProtoParcel, Type, Body};
 use crate::net::{write_parcel, read_parcel};
 
-pub fn seq_recovery(neighbour_list: Vec<SocketAddr>, _id: u16) -> u8 {
-
+pub fn seq_recovery(neighbour_list: &Vec<SocketAddr>) -> u8 {
     let (sender, receiver): (Sender<u8>, Receiver<u8>) = mpsc::channel(); // setup channel for results
 
     let req = ProtoParcel::seq_req();

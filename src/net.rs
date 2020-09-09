@@ -88,7 +88,18 @@ pub fn listener_thread(_recv: Receiver<ThreadSignal>, state: Arc<RwLock<State>>,
                 Type::ProtoError => {
                     println!("Proto Error")
                 }
-
+                Type::StateChange => {
+                    if let Body::StateChange { mode } = parcel.body {
+                        println!("Received StateChange with id {} from node {}", parcel.id, parcel.sender_id);
+                        let mut state = state_ref.write().unwrap();
+                        state.neighbours.entry(parcel.sender_id).and_modify(|node| {
+                            node.mode = mode
+                        });
+                        drop(state);
+                        let parcel = ProtoParcel::ack(parcel.id);
+                        write_parcel(&mut stream, &parcel);
+                    }
+                }
                 _ => {
                     println!("Unexpected response type to discovery request, {}", parcel.parcel_type);
                     return;
