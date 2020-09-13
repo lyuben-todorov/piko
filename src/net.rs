@@ -16,7 +16,7 @@ pub fn read_parcel(stream: &mut TcpStream) -> ProtoParcel {
     // println!("Expecting {} bytes", count);
 
     let mut buf = vec![0u8; count as usize];
-    stream.read_exact(&mut buf);
+    stream.read_exact(&mut buf).unwrap();
 
     let proto_parcel: ProtoParcel = serde_cbor::from_slice(buf.as_slice()).unwrap();
     proto_parcel
@@ -28,8 +28,8 @@ pub fn write_parcel(stream: &mut TcpStream, parcel: &ProtoParcel) {
     let count = buf.len();
 
     // println!("Writing {} bytes", count);
-    stream.write_u8(count as u8);
-    stream.write_all(buf);
+    stream.write_u8(count as u8).unwrap();
+    stream.write_all(buf).unwrap();
 }
 
 pub fn listener_thread(_recv: Receiver<ThreadSignal>, state: Arc<RwLock<State>>, socket: TcpListener) {
@@ -101,7 +101,7 @@ pub fn listener_thread(_recv: Receiver<ThreadSignal>, state: Arc<RwLock<State>>,
                     }
                 }
                 _ => {
-                    println!("Unexpected response type to discovery request, {}", parcel.parcel_type);
+                    println!("Unexpected message type!, {}", parcel.parcel_type);
                     return;
                 }
             }

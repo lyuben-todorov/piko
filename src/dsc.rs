@@ -3,7 +3,6 @@ use crate::state::{Mode, State, Node};
 use std::net::{TcpStream, SocketAddr};
 
 use crate::proto::{Type, ProtoParcel, Body};
-use std::io::{Write, Read};
 use std::sync::mpsc::{Sender, Receiver};
 use std::collections::HashSet;
 use rayon::prelude::*;

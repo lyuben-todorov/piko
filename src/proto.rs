@@ -13,7 +13,7 @@ use std::sync::Mutex;
 use lazy_static::lazy_static;
 
 
-static PROTO_VERSION: &str = "1.0";
+static _PROTO_VERSION: &str = "1.0";
 
 lazy_static! {
     static ref SENDER: Mutex<u16> = Mutex::new(0);
@@ -38,7 +38,7 @@ pub enum Type {
     SequenceLock = 8,
     Message = 9,
     Ack = 10,
-
+    AddNode = 11,
 }
 
 impl Display for Type {
@@ -55,6 +55,7 @@ impl Display for Type {
             Type::SequenceLock => write!(f, "{}", "SequenceLock"),
             Type::Message => write!(f, "{}", "Message"),
             Type::Ack => write!(f, "{}", "Ack"),
+            Type::AddNode => write!(f, "{}", "AddNode")
         }
     }
 }
@@ -81,6 +82,10 @@ pub enum Body {
 
     SeqRes {
         seq_number: u8
+    },
+
+    AddNode {
+        nodes: Vec<Node>
     },
 
     StateChange {
@@ -156,6 +161,17 @@ impl ProtoParcel {
             parcel_type: Type::SeqRes,
             size: 0,
             body: Body::SeqRes { seq_number },
+        }
+    }
+
+    pub fn add_node(nodes: Vec<Node>) -> ProtoParcel {
+        ProtoParcel {
+            id: generate_id(),
+            sender_id: *SENDER.lock().unwrap(),
+            is_response: true,
+            parcel_type: Type::AddNode,
+            size: 0,
+            body: Body::AddNode { nodes },
         }
     }
 

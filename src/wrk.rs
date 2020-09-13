@@ -2,10 +2,9 @@ use crate::state::{State, Mode};
 use std::sync::{RwLock, Arc, mpsc};
 use std::sync::mpsc::{Sender, Receiver};
 use std::thread::park;
-use crate::seq_recovery::seq_recovery;
+use crate::req::{push_state::push_state, seq_recovery::seq_recovery};
 use crate::heartbeat::heartbeat;
 use crate::internal::ThreadSignal;
-use crate::push_state::push_state;
 
 pub fn wrk(state: Arc<RwLock<State>>, _sender: Sender<ThreadSignal>) {
     let mut state_ref = state.write().unwrap();

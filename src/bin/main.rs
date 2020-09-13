@@ -6,7 +6,6 @@ extern crate sha2;
 extern crate bytes;
 extern crate num;
 extern crate num_derive;
-#[macro_use(lazy_static)]
 extern crate lazy_static;
 
 use config::*;

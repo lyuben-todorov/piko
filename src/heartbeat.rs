@@ -23,7 +23,7 @@ pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, _timeout: u32, rx: 
         // Add new keys
         for key in new_keys {
             if !timeouts.contains_key(&key) {
-                println!("Adding {} to monitor",key);
+                println!("Adding {} to monitor", key);
                 timeouts.insert(key, 0);
             }
         }
@@ -46,7 +46,9 @@ pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, _timeout: u32, rx: 
                 if !result.1 {
                     let entry = timeouts.entry(result.0).or_insert(0);
                     *entry += 1;
-                    if *entry > 5 { println!("Node with id {} timed out for {}", result.0, entry) }
+                    if *entry > 5 {
+                        println!("Node with id {} timed out for {}", result.0, entry);
+                    }
                 } else {
                     timeouts.insert(result.0, 0);
                 }
