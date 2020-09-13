@@ -8,6 +8,7 @@ use std::io::{Read, Write};
 use crate::proto::{ProtoParcel, Type, Body};
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use crate::internal::ThreadSignal;
+use crate::req::add_node::add_node;
 
 
 pub fn read_parcel(stream: &mut TcpStream) -> ProtoParcel {
@@ -78,6 +79,12 @@ pub fn listener_thread(_recv: Receiver<ThreadSignal>, state: Arc<RwLock<State>>,
                         let mut state = state_ref.write().unwrap(); // acquire write lock
                         let state_neighbours: Vec<Node> = state.neighbours.values().cloned().collect();
                         let self_node = state.self_node_information.clone();
+
+                        // Push found node to neighbours
+                        let mut update: Vec<Node> = Vec::new();
+                        update.push(identity.clone());
+                        println!("Pushing new node to neighbours!");
+                        add_node(&state.get_neighbour_addrs(), update);
 
                         println!("Adding {} to state", identity.name);
                         state.add_neighbour(identity); // add node to state after neighbours are cloned
