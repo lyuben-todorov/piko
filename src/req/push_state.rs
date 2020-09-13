@@ -6,6 +6,7 @@ use rayon::prelude::*;
 use crate::net::{write_parcel, read_parcel, ack};
 use crate::state::Mode;
 use crate::internal::ThreadSignal;
+use log::{debug, error, info, trace, warn};
 
 /*
     Pushes state update to each host given.
@@ -23,11 +24,11 @@ pub fn push_state(neighbour_list: &Vec<SocketAddr>, state: Mode) {
 }
 
 fn update(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<ThreadSignal>) {
-    println!("Pushing update to {}", host);
+    info!("Pushing update to {}", host);
     let mut tcp_stream = match TcpStream::connect(host) {
         Ok(stream) => stream,
         Err(err) => {
-            println!("{}: {}", err, host);
+            error!("{}: {}", err, host);
             return;
         }
     };

@@ -10,6 +10,7 @@ use std::time::Duration;
 use crate::internal::ThreadSignal;
 use std::collections::{HashMap, HashSet};
 
+use log::{debug, error, info, trace, warn};
 
 pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, _timeout: u32, rx: Receiver<ThreadSignal>) {
     let mut scheduler = Scheduler::new();
@@ -23,7 +24,7 @@ pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, _timeout: u32, rx: 
         // Add new keys
         for key in new_keys {
             if !timeouts.contains_key(&key) {
-                println!("Adding {} to monitor", key);
+                info!("Adding {} to monitor", key);
                 timeouts.insert(key, 0);
             }
         }
@@ -47,7 +48,7 @@ pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, _timeout: u32, rx: 
                     let entry = timeouts.entry(result.0).or_insert(0);
                     *entry += 1;
                     if *entry > 5 {
-                        println!("Node with id {} timed out for {}", result.0, entry);
+                        warn!("Node with id {} timed out for {}", result.0, entry);
                     }
                 } else {
                     timeouts.insert(result.0, 0);
@@ -60,29 +61,29 @@ pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, _timeout: u32, rx: 
 
     let thread_handle = scheduler.watch_thread(Duration::from_millis(100));
 
-    println!("Started heartbeat thread!");
+    info!("Started heartbeat thread!");
 
     for sig in rx.iter() {
         match sig {
             ThreadSignal::StopProcess => {
                 thread_handle.stop();
-                println!("Stopping heartbeat thread!");
+                info!("Stopping heartbeat thread!");
                 return;
             }
             _ => {
-                println!("Unknown signal sent to monitor thread")
+                error!("Unknown signal sent to monitor thread")
             }
         }
     }
 }
 
 fn ping(node: &Node, req_parcel: &ProtoParcel, tx: &mut Sender<(u16, bool)>) {
-    println!("Sending Ping to {}", node.id);
+    info!("Sending Ping to {}", node.id);
 
     let mut tcp_stream = match TcpStream::connect(node.host) {
         Ok(stream) => stream,
         Err(err) => {
-            println!("{}: {}", err, node.id);
+            error!("{}: {}", err, node.id);
             tx.send((node.id, false)).unwrap();
             return;
         }
@@ -95,7 +96,7 @@ fn ping(node: &Node, req_parcel: &ProtoParcel, tx: &mut Sender<(u16, bool)>) {
         }
         Type::ProtoError => {}
         _ => {
-            println!("Unexpected response type to Ping, {}", res_parcel.parcel_type);
+            error!("Unexpected response type to Ping, {}", res_parcel.parcel_type);
             tx.send((node.id, false)).unwrap();
             return;
         }

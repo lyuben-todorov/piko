@@ -5,19 +5,20 @@ use std::thread::park;
 use crate::req::{push_state::push_state, seq_recovery::seq_recovery};
 use crate::heartbeat::heartbeat;
 use crate::internal::ThreadSignal;
+use log::{debug, error, info, trace, warn};
 
 pub fn wrk(state: Arc<RwLock<State>>, _sender: Sender<ThreadSignal>) {
     let mut state_ref = state.write().unwrap();
 
     if state_ref.get_cluster_size() > 0 {
-        println!("Acquiring sequence number");
+        info!("Acquiring sequence number");
         let neighbours = state_ref.get_neighbour_addrs();
         let seq_num = seq_recovery(&neighbours);
 
         state_ref.sequence = seq_num;
 
         push_state(&neighbours, Mode::Wrk);
-        println!("Starting from sequence number: {}", seq_num);
+        info!("Starting from sequence number: {}", seq_num);
     }
 
     drop(state_ref);

@@ -6,6 +6,7 @@ use crate::proto::{Type, ProtoParcel, Body};
 use std::sync::mpsc::{Sender, Receiver};
 use std::collections::HashSet;
 use rayon::prelude::*;
+use log::{debug, error, info, trace, warn};
 
 use crate::net::{write_parcel, read_parcel};
 
@@ -18,7 +19,7 @@ pub fn dsc(state: Arc<RwLock<State>>, neighbour_list: &Vec<SocketAddr>) {
         return;
     }
 
-    println!("Attempting to connect to {} hosts", neighbour_list.len());
+    info!("Attempting to connect to {} hosts", neighbour_list.len());
 
     let (sender, receiver): (Sender<Vec<Node>>, Receiver<Vec<Node>>) = mpsc::channel(); // make channel for responses
 
@@ -43,7 +44,7 @@ pub fn dsc(state: Arc<RwLock<State>>, neighbour_list: &Vec<SocketAddr>) {
     }
     let mut state = state.write().unwrap(); // acquire write lock
     for neighbour in neighbours {
-        println!("Found {}:{}!", neighbour.name, neighbour.mode);
+        info!("Found {}:{}!", neighbour.name, neighbour.mode);
         state.add_neighbour(neighbour);
     }
     state.change_mode(Mode::Wrk);
@@ -52,11 +53,11 @@ pub fn dsc(state: Arc<RwLock<State>>, neighbour_list: &Vec<SocketAddr>) {
 // Request/response on same tcp stream
 // Writes result to state after acquiring write lock
 fn discover(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<Vec<Node>>) {
-    println!("Connecting to {}", host);
+    info!("Connecting to {}", host);
     let mut tcp_stream = match TcpStream::connect(host) {
         Ok(stream) => stream,
         Err(err) => {
-            println!("{}: {}", err, host);
+            error!("{}: {}", err, host);
             return;
         }
     };
@@ -69,14 +70,14 @@ fn discover(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<Vec<Nod
             if let Body::DscRes { neighbours } = res_parcel.body {
                 tx.send(neighbours).unwrap();
             } else {
-                println!("Body-header type mismatch!");
+                error!("Body-header type mismatch!");
                 return;
             }
         }
 
         Type::ProtoError => {}
         _ => {
-            println!("Unexpected response type to discovery request, {}", res_parcel.parcel_type);
+            error!("Unexpected response type to discovery request, {}", res_parcel.parcel_type);
             return;
         }
     }

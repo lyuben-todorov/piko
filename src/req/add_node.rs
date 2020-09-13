@@ -9,6 +9,7 @@ use std::sync::mpsc;
 use crate::proto::{ProtoParcel};
 use rayon::prelude::*;
 use crate::net::{write_parcel, read_parcel, ack};
+use log::{debug, error, info, trace, warn};
 
 pub fn add_node(neighbour_list: &Vec<SocketAddr>, nodes: Vec<Node>) {
     let (sender, receiver): (Sender<ThreadSignal>, Receiver<ThreadSignal>) = mpsc::channel(); // setup channel for results
@@ -31,11 +32,11 @@ pub fn add_node(neighbour_list: &Vec<SocketAddr>, nodes: Vec<Node>) {
 }
 
 fn update(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<ThreadSignal>) {
-    println!("Pushing new neighbours to {}", host);
+    info!("Pushing new neighbours to {}", host);
     let mut tcp_stream = match TcpStream::connect(host) {
         Ok(stream) => stream,
         Err(err) => {
-            println!("{}: {}", err, host);
+            error!("{}: {}", err, host);
             return;
         }
     };

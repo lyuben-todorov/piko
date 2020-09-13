@@ -4,6 +4,7 @@ use rayon::prelude::*;
 use std::net::{SocketAddr, TcpStream};
 use crate::proto::{ProtoParcel, Type, Body};
 use crate::net::{write_parcel, read_parcel};
+use log::{debug, error, info, trace, warn};
 
 /*
     Retrieves sequence number from each host provided, returning the largest(most-latest)
@@ -20,17 +21,17 @@ pub fn seq_recovery(neighbour_list: &Vec<SocketAddr>) -> u8 {
     // end parallel scope
 
     let max_seq = receiver.iter().max_by_key(|seq| *seq).unwrap();
-    println!("Recovered sequence number {}", max_seq);
+    info!("Recovered sequence number {}", max_seq);
     max_seq
 }
 
 fn recover(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<u8>) {
-    println!("Recovering sequence from {}", host);
+    info!("Recovering sequence from {}", host);
 
     let mut tcp_stream = match TcpStream::connect(host) {
         Ok(stream) => stream,
         Err(err) => {
-            println!("{}: {}", err, host);
+            error!("{}: {}", err, host);
             return;
         }
     };
@@ -41,14 +42,14 @@ fn recover(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<u8>) {
             if let Body::SeqRes { seq_number } = res_parcel.body {
                 tx.send(seq_number).unwrap();
             } else {
-                println!("Body-header type mismatch!");
+                error!("Body-header type mismatch!");
                 return;
             }
         }
 
         Type::ProtoError => {}
         _ => {
-            println!("Unexpected response type to SeqReq, {}", res_parcel.parcel_type);
+            error!("Unexpected response type to SeqReq, {}", res_parcel.parcel_type);
             return;
         }
     }

@@ -1,12 +1,11 @@
-extern crate glob;
 extern crate config;
 extern crate rayon;
-extern crate bit_vec;
 extern crate sha2;
-extern crate bytes;
 extern crate num;
 extern crate num_derive;
 extern crate lazy_static;
+extern crate log;
+extern crate fern;
 
 use config::*;
 
@@ -28,8 +27,12 @@ use piko::wrk::wrk;
 use piko::internal::ThreadSignal;
 use piko::proto::{set_sender_id};
 
+use fern::colors::{Color, ColoredLevelConfig};
+use log::{debug, error, info, trace, warn};
 
 fn main() {
+    setup_logger();
+
     let mut settings = Config::default();
 
     let argv: Vec<String> = env::args().collect();
@@ -75,14 +78,14 @@ fn main() {
     }
 
     rayon::ThreadPoolBuilder::new().num_threads(thread_count as usize).build_global().unwrap();
-    println!("Setting worker pool count to {}.", thread_count);
+    info!("Setting worker pool count to {}.", thread_count);
 
     let addr = Ipv4Addr::from_str(&host_name).expect("Error parsing host name");
     let address = SocketAddr::from(SocketAddrV4::new(addr, port as u16));
     let listener = TcpListener::bind(address);
     let listener = match listener {
         Ok(listener) => {
-            println!("Bound to socket {}.", listener.local_addr().unwrap());
+            info!("Bound to socket {}.", listener.local_addr().unwrap());
             listener
         }
         Err(error) => panic!("Error during port binding: {}", error),
@@ -103,12 +106,12 @@ fn main() {
     let state_ref = state.clone();
     rayon::spawn(move || listener_thread(listener_receiver, state_ref, listener));
     // start monitor
-    println!("Started main worker thread!");
+    info!("Started main worker thread!");
 
     loop {
         let state_lock = state.read().unwrap();
         let mode = &state_lock.self_node_information.mode;
-        println!("Mode: {}", mode);
+        info!("Mode: {}", mode);
         match mode {
             Mode::Dsc => {
                 drop(state_lock);
@@ -121,7 +124,7 @@ fn main() {
             Mode::Err => {}
             Mode::Panic => {}
             Mode::Shutdown => {
-                println!("Bye!");
+                info!("Bye!");
                 break;
             }
             _ => {}
@@ -129,5 +132,46 @@ fn main() {
     }
 
 
-    println!("Shutting down.");
+    info!("Shutting down.");
+}
+
+fn setup_logger() {
+    let colors_line = ColoredLevelConfig::new()
+        .error(Color::Red)
+        .warn(Color::Yellow)
+        // we actually don't need to specify the color for debug and info, they are white by default
+        .info(Color::White)
+        .debug(Color::White)
+        // depending on the terminals color scheme, this is the same as the background color
+        .trace(Color::BrightBlack);
+
+    let colors_level = colors_line.clone().info(Color::Green);
+    fern::Dispatch::new()
+        .format(move |out, message, record| {
+            out.finish(format_args!(
+                "{color_line}[{date}][{target}][{level}{color_line}] {message}\x1B[0m",
+                color_line = format_args!(
+                    "\x1B[{}m",
+                    colors_line.get_color(&record.level()).to_fg_str()
+                ),
+                date = chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
+                target = record.target(),
+                level = colors_level.color(record.level()),
+                message = message,
+            ));
+        })
+        // set the default log level. to filter out verbose log messages from dependencies, set
+        // this to Warn and overwrite the log level for your crate.
+        .level(log::LevelFilter::Debug)
+        // change log levels for individual modules. Note: This looks for the record's target
+        // field which defaults to the module path but can be overwritten with the `target`
+        // parameter:
+        // `info!(target="special_target", "This log message is about special_target");`
+        .level_for("pretty_colored", log::LevelFilter::Trace)
+        // output to stdout
+        .chain(std::io::stdout())
+        .apply()
+        .unwrap();
+
+    debug!("finished setting up logging! yay!");
 }

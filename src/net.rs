@@ -10,11 +10,12 @@ use byteorder::{ReadBytesExt, WriteBytesExt};
 use crate::internal::ThreadSignal;
 use crate::req::add_node::add_node;
 
+use log::{debug, error, info, trace, warn};
 
 pub fn read_parcel(stream: &mut TcpStream) -> ProtoParcel {
     let count = stream.read_u8().unwrap();
 
-    // println!("Expecting {} bytes", count);
+    // debug!("Expecting {} bytes", count);
 
     let mut buf = vec![0u8; count as usize];
     stream.read_exact(&mut buf).unwrap();
@@ -28,7 +29,7 @@ pub fn write_parcel(stream: &mut TcpStream, parcel: &ProtoParcel) {
     let buf = parcel.as_slice();
     let count = buf.len();
 
-    // println!("Writing {} bytes", count);
+    // debug!("Writing {} bytes", count);
     stream.write_u8(count as u8).unwrap();
     stream.write_all(buf).unwrap();
 }
@@ -38,13 +39,13 @@ pub fn ack(response: ProtoParcel, ack_id: u64) -> ThreadSignal {
         Type::Ack => {
             if let Body::Ack { message_id } = response.body {
                 if message_id == ack_id {
-                    println!("Acked {}", message_id);
+                    info!("Acked {}", message_id);
                     ThreadSignal::Success
                 } else {
                     ThreadSignal::Fail
                 }
             } else {
-                println!("Body-header type mismatch!");
+                error!("Body-header type mismatch!");
                 ThreadSignal::Fail
             }
         }
@@ -52,14 +53,14 @@ pub fn ack(response: ProtoParcel, ack_id: u64) -> ThreadSignal {
             ThreadSignal::Fail
         }
         _ => {
-            println!("Expected acknowledge, got {}", response.parcel_type);
+            error!("Expected acknowledge, got {}", response.parcel_type);
             ThreadSignal::Fail
         }
     }
 }
 
 pub fn listener_thread(_recv: Receiver<ThreadSignal>, state: Arc<RwLock<State>>, socket: TcpListener) {
-    println!("Started Listener thread!");
+    info!("Started Listener thread!");
 
     for stream in socket.incoming() {
         let mut stream = stream.unwrap();
@@ -72,7 +73,7 @@ pub fn listener_thread(_recv: Receiver<ThreadSignal>, state: Arc<RwLock<State>>,
             match parcel.parcel_type {
                 Type::DscReq => {
                     if let Body::DscReq { identity } = parcel.body {
-                        println!("Received DscReq with id {} from node {}", parcel.id, parcel.sender_id);
+                        info!("Received DscReq with id {} from node {}", parcel.id, parcel.sender_id);
 
                         let mut neighbours: Vec<Node> = Vec::new();
 
@@ -83,10 +84,10 @@ pub fn listener_thread(_recv: Receiver<ThreadSignal>, state: Arc<RwLock<State>>,
                         // Push found node to neighbours
                         let mut update: Vec<Node> = Vec::new();
                         update.push(identity.clone());
-                        println!("Pushing new node to neighbours!");
+                        info!("Pushing new node to neighbours!");
                         add_node(&state.get_neighbour_addrs(), update);
 
-                        println!("Adding {} to state", identity.name);
+                        info!("Adding {} to state", identity.name);
                         state.add_neighbour(identity); // add node to state after neighbours are cloned
                         drop(state); // drop write lock before tcp writes
 
@@ -97,13 +98,13 @@ pub fn listener_thread(_recv: Receiver<ThreadSignal>, state: Arc<RwLock<State>>,
 
                         write_parcel(&mut stream, &parcel);
                     } else {
-                        println!("Body-header type mismatch!");
+                        error!("Body-header type mismatch!");
                         return;
                     }
                 }
 
                 Type::SeqReq => {
-                    println!("Received SeqReq with id {} from node {}", parcel.id, parcel.sender_id);
+                    info!("Received SeqReq with id {} from node {}", parcel.id, parcel.sender_id);
                     let state = state_ref.write().unwrap(); // acquire write lock
                     let seq = state.sequence;
                     let parcel = ProtoParcel::seq_res(seq);
@@ -111,18 +112,18 @@ pub fn listener_thread(_recv: Receiver<ThreadSignal>, state: Arc<RwLock<State>>,
                     write_parcel(&mut stream, &parcel);
                 }
                 Type::Ping => {
-                    println!("Received Ping with id {} from node {}", parcel.id, parcel.sender_id);
+                    info!("Received Ping with id {} from node {}", parcel.id, parcel.sender_id);
                     let state = state_ref.write().unwrap(); // acquire write lock
                     let parcel = ProtoParcel::pong();
                     drop(state);
                     write_parcel(&mut stream, &parcel);
                 }
                 Type::ProtoError => {
-                    println!("Proto Error")
+                    error!("Proto Error")
                 }
                 Type::StateChange => {
                     if let Body::StateChange { mode } = parcel.body {
-                        println!("Received StateChange with id {} from node {}", parcel.id, parcel.sender_id);
+                        info!("Received StateChange with id {} from node {}", parcel.id, parcel.sender_id);
                         let mut state = state_ref.write().unwrap();
                         state.neighbours.entry(parcel.sender_id).and_modify(|node| {
                             node.mode = mode
@@ -134,7 +135,7 @@ pub fn listener_thread(_recv: Receiver<ThreadSignal>, state: Arc<RwLock<State>>,
                 }
                 Type::AddNode => {
                     if let Body::AddNode { nodes } = parcel.body {
-                        println!("Received AddNode with id {} from node {}", parcel.id, parcel.sender_id);
+                        info!("Received AddNode with id {} from node {}", parcel.id, parcel.sender_id);
                         let mut state = state_ref.write().unwrap();
                         for node in nodes {
                             state.add_neighbour(node);
@@ -145,7 +146,7 @@ pub fn listener_thread(_recv: Receiver<ThreadSignal>, state: Arc<RwLock<State>>,
                     }
                 }
                 _ => {
-                    println!("Unexpected message type!, {}", parcel.parcel_type);
+                    error!("Unexpected message type!, {}", parcel.parcel_type);
                     return;
                 }
             }
