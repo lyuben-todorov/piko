@@ -5,6 +5,9 @@ use std::net::{SocketAddr, TcpStream};
 use crate::proto::{ProtoParcel, Type, Body};
 use crate::net::{write_parcel, read_parcel};
 
+/*
+    Retrieves sequence number from each host provided, returning the largest(most-latest)
+ */
 pub fn seq_recovery(neighbour_list: &Vec<SocketAddr>) -> u8 {
     let (sender, receiver): (Sender<u8>, Receiver<u8>) = mpsc::channel(); // setup channel for results
 

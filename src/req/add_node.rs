@@ -1,29 +1,37 @@
+/*
+
+ */
+use std::net::{SocketAddr, TcpStream};
+use crate::state::Node;
+use crate::internal::ThreadSignal;
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::mpsc;
-use std::net::{SocketAddr, TcpStream};
 use crate::proto::{ProtoParcel};
 use rayon::prelude::*;
 use crate::net::{write_parcel, read_parcel, ack};
-use crate::state::Mode;
-use crate::internal::ThreadSignal;
 
-/*
-    Pushes state update to each host given.
- */
-pub fn push_state(neighbour_list: &Vec<SocketAddr>, state: Mode) {
-    let (sender, _receiver): (Sender<ThreadSignal>, Receiver<ThreadSignal>) = mpsc::channel(); // setup channel for results
+pub fn add_node(neighbour_list: &Vec<SocketAddr>, nodes: Vec<Node>) {
+    let (sender, receiver): (Sender<ThreadSignal>, Receiver<ThreadSignal>) = mpsc::channel(); // setup channel for results
 
-    let req = ProtoParcel::state_change(state);
+    let req = ProtoParcel::add_node(nodes);
 
     // begin parallel scope
     neighbour_list.into_par_iter().for_each_with(sender, |s, addr| {
         update(&addr, &req, s);
     });
     // end parallel scope
+
+    for result in receiver.iter(){
+        match result {
+            ThreadSignal::Success => {}
+            ThreadSignal::Fail => {}
+            _ => {}
+        }
+    }
 }
 
 fn update(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<ThreadSignal>) {
-    println!("Pushing update to {}", host);
+    println!("Pushing new neighbours to {}", host);
     let mut tcp_stream = match TcpStream::connect(host) {
         Ok(stream) => stream,
         Err(err) => {
@@ -32,6 +40,7 @@ fn update(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<ThreadSig
         }
     };
     let m_id = req_parcel.id;
+
     write_parcel(&mut tcp_stream, &req_parcel);
     let res_parcel = read_parcel(&mut tcp_stream);
     let result = ack(res_parcel, m_id);

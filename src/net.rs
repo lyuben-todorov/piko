@@ -32,6 +32,31 @@ pub fn write_parcel(stream: &mut TcpStream, parcel: &ProtoParcel) {
     stream.write_all(buf).unwrap();
 }
 
+pub fn ack(response: ProtoParcel, ack_id: u64) -> ThreadSignal {
+    match response.parcel_type {
+        Type::Ack => {
+            if let Body::Ack { message_id } = response.body {
+                if message_id == ack_id {
+                    println!("Acked {}", message_id);
+                    ThreadSignal::Success
+                } else {
+                    ThreadSignal::Fail
+                }
+            } else {
+                println!("Body-header type mismatch!");
+                ThreadSignal::Fail
+            }
+        }
+        Type::ProtoError => {
+            ThreadSignal::Fail
+        }
+        _ => {
+            println!("Expected acknowledge, got {}", response.parcel_type);
+            ThreadSignal::Fail
+        }
+    }
+}
+
 pub fn listener_thread(_recv: Receiver<ThreadSignal>, state: Arc<RwLock<State>>, socket: TcpListener) {
     println!("Started Listener thread!");
 
@@ -98,6 +123,15 @@ pub fn listener_thread(_recv: Receiver<ThreadSignal>, state: Arc<RwLock<State>>,
                         drop(state);
                         let parcel = ProtoParcel::ack(parcel.id);
                         write_parcel(&mut stream, &parcel);
+                    }
+                }
+                Type::AddNode => {
+                    if let Body::AddNode { nodes } = parcel.body {
+                        println!("Received AddNode with id {} from node {}", parcel.id, parcel.sender_id);
+                        let mut state = state_ref.write().unwrap();
+                        for node in nodes {
+                            state.add_neighbour(node);
+                        }
                     }
                 }
                 _ => {
