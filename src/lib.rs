@@ -8,3 +8,4 @@ pub mod state;
 pub mod heartbeat;
 pub mod internal;
 pub mod req;
+pub mod client;

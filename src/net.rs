@@ -29,7 +29,7 @@ pub fn write_parcel(stream: &mut TcpStream, parcel: &ProtoParcel) {
     let buf = parcel.as_slice();
     let count = buf.len();
 
-    // debug!("Writing {} bytes", count);
+    // println!("Writing {} bytes", count);
     stream.write_u8(count as u8).unwrap();
     stream.write_all(buf).unwrap();
 }

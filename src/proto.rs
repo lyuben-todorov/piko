@@ -93,6 +93,7 @@ pub enum Body {
     },
 
     Message {
+        sequence: u16,
         bytes: Vec<u8>,
         sender: u16,
     },
@@ -100,6 +101,12 @@ pub enum Body {
     Ack {
         message_id: u64
     },
+}
+
+pub struct MessageWrapper {
+    pub message: Vec<u8>,
+    pub sequence: u16,
+    pub receiver_mask: u32
 }
 
 

@@ -7,6 +7,9 @@ use crate::heartbeat::heartbeat;
 use crate::internal::ThreadSignal;
 use log::{debug, error, info, trace, warn};
 
+///
+/// Tasked with dispatching events to clients
+///
 pub fn wrk(state: Arc<RwLock<State>>, _sender: Sender<ThreadSignal>) {
     let mut state_ref = state.write().unwrap();
 
@@ -26,8 +29,6 @@ pub fn wrk(state: Arc<RwLock<State>>, _sender: Sender<ThreadSignal>) {
 
     // start heartbeat thread
     rayon::spawn(move || heartbeat(state.clone(), 5, 5, monitor_receiver));
-
-
     park();
 }
 
