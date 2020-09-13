@@ -132,6 +132,9 @@ pub fn listener_thread(_recv: Receiver<ThreadSignal>, state: Arc<RwLock<State>>,
                         for node in nodes {
                             state.add_neighbour(node);
                         }
+                        drop(state);
+                        let parcel = ProtoParcel::ack(parcel.id);
+                        write_parcel(&mut stream, &parcel);
                     }
                 }
                 _ => {
