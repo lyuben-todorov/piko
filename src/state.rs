@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, BinaryHeap};
 use sha2::{Sha256, Digest};
 use byteorder::{ReadBytesExt, BigEndian};
 use num_derive::{FromPrimitive, ToPrimitive};
@@ -11,6 +11,7 @@ use serde::export::Formatter;
 use std::fmt;
 use std::net::SocketAddr;
 use crate::state::Mode::Wrk;
+use crate::wrk::ResourceRequest;
 
 
 #[derive(FromPrimitive, ToPrimitive, Deserialize, Serialize, Clone, PartialEq)]
@@ -40,11 +41,12 @@ pub struct State {
     pub self_node_information: Node,
     pub neighbours: HashMap<u16, Node>,
     pub sequence: u8,
+    pub pledge_queue: BinaryHeap<ResourceRequest>,
 }
 
 impl State {
-    pub fn new(self_node_information: Node, neighbours: HashMap<u16, Node>) -> Self {
-        State { self_node_information, neighbours, sequence: 0 }
+    pub fn new(self_node_information: Node, neighbours: HashMap<u16, Node>, pledge_queue: BinaryHeap<ResourceRequest>) -> Self {
+        State { self_node_information, neighbours, sequence: 0, pledge_queue }
     }
 
     pub fn get_cluster_size(&self) -> usize {

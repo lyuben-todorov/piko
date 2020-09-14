@@ -2,6 +2,15 @@
 The goal of this protocol is to consistently _verify_ the sequence of an unbounded stream of events. This excludes    
 storage. The cluster relies on each node having a synchronized clock. 
 
+Each node is keeping track of a local a min-heap priority queue of 'resource locks'. The top of the priority queue gives 
+resource ownership to the node who requested it. The node with resource ownership must then release it.
+
+### ResourceLock
+Client pushes message to node `A`. `A` sends its resource lock to every neighbouring node. 
+Upon receiving a resource lock, each node inserts it into its resource queue and acknowledges the request.
+Upon receiving all acknowledges, `A` inserts the lock into its own resource queue.  
+### ResourceRelease
+Each node should always operate on the same `root` resource lock of the priority queue.   
 ### What shouldn't happen
 * Node A receives ResourceRequest for message `a` at `t` and dispatches its acknowledgement at a later time `t'`. 
 *Between* `t` and `t'` a local client tries to send a message `b` to the cluster.    

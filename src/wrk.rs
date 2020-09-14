@@ -16,7 +16,7 @@ use std::cmp::Ordering;
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct ResourceRequest {
     owner: u16,
-    message_hash:u64,
+    message_hash: u64,
     timestamp: DateTime<Utc>,
     sequence: u16,
 }
@@ -35,7 +35,7 @@ impl PartialOrd for ResourceRequest {
 
 pub struct ResourceRelease {
     owner: u16,
-    message_hash:u64,
+    message_hash: u64,
     timestamp: DateTime<Utc>,
     message: MessageWrapper,
     local: bool,
@@ -57,7 +57,6 @@ pub fn wrk(state: Arc<RwLock<State>>, recevier: &Receiver<Pledge>) {
 
     let local_id = state_ref.self_node_information.id;
 
-    let mut pledgeQueue: BinaryHeap<ResourceRequest> = BinaryHeap::new();
 
     if state_ref.get_cluster_size() == 0 {}
     info!("Acquiring sequence number");
@@ -74,32 +73,24 @@ pub fn wrk(state: Arc<RwLock<State>>, recevier: &Receiver<Pledge>) {
     // release state lock
     drop(state_ref);
 
-    let mut clock = Utc::now();
+    loop {
+        let mut state_ref = state.write().unwrap();
+        let mut op_queue = &state_ref.pledge_queue;
+        let pledge = op_queue.pop();
 
-    for pledge in recevier.iter() {
         match pledge {
             ///
             /// Upon resource request, the node pushes the request to the priority queue.
             ///
             Pledge::ResourceRequest(req) => {
-                    pledgeQueue.push(req);
-            }
-            ///
-            /// Upon resource release the node checks the owner of the next ResourceRequest.
-            /// If it is the owner, it sends a Commit request, asking its neighbours to confirm the
-            /// commit lock. After receiving all acks the nodes sends it's ResourceRelease together
-            /// with the message and pops its message queue.
-            ///
-            Pledge::ResourceRelease(rel) => {
-                let req = pledgeQueue.peek().unwrap();
-                if req.message_hash == rel.message_hash && rel.timestamp > req.timestamp {
-                    // release resource
-                } else {
+                if req.owner == local_id {
 
                 }
             }
+            _ => {}
         }
     }
+    for pledge in recevier.iter() {}
 
 
     park();
