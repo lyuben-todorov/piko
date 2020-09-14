@@ -9,9 +9,10 @@ storage. The cluster relies on each node having a synchronized clock.
 This must be interpreted as `a -> b`.
 
 * Node B sends a ResourceRequest for message `a` to Node A with timestamp `t0`. The request arrives at A at time `t`
-and is acknowledged at time `t'`. Before `t`, a local client to A tries sending a message `b` to the cluster.
+and is acknowledged at time `t'`. Before `t`, a local client to A tries sending a message `b` with timestamp `t1` where
+`t0 -> t1` to the cluster.
 
-This must be interpreted as `b -> a`.
+This must be interpreted as `a -> b`.
 ### Discovery phase  
 A node starts as `Dsc`, looking for other nodes on the cluster. It sends a `DscReq` to its pre-defined 
 list of neighbours. The `DscReq` contains the sender's information. Each of the nodes responding to a `DscReq` 
