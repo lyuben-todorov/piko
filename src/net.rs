@@ -2,7 +2,7 @@ use std::net::{TcpListener, TcpStream};
 
 use crate::state::{State, Node};
 
-use std::sync::mpsc::{Receiver, Sender};
+use std::sync::mpsc::{Sender};
 use std::sync::{Arc, RwLock};
 use std::io::{Read, Write};
 use crate::proto::{ProtoParcel, Type, Body};
@@ -60,7 +60,7 @@ pub fn ack(response: ProtoParcel, ack_id: u64) -> ThreadSignal {
     }
 }
 
-pub fn listener_thread(state: Arc<RwLock<State>>, socket: TcpListener, sender: Sender<Pledge>,) {
+pub fn listener_thread(state: Arc<RwLock<State>>, socket: TcpListener, _sender: Sender<Pledge>,) {
     info!("Started Listener thread!");
 
     for stream in socket.incoming() {

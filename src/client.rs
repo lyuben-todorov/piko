@@ -1,10 +1,10 @@
-use std::sync::{RwLock, Arc, Mutex};
-use crate::state::State;
+use std::sync::{RwLock, Arc};
+
 use std::collections::{VecDeque, HashMap};
-use std::sync::mpsc::{Receiver, Sender};
-use crate::proto::MessageWrapper;
-use rayon::prelude::*;
-use crate::internal::ThreadSignal;
+
+
+
+
 use std::net::{TcpListener, TcpStream};
 use serde::{Serialize, Deserialize};
 use byteorder::ReadBytesExt;
@@ -74,7 +74,7 @@ fn write_bytes(stream: &mut TcpStream, buf: &[u8]) {
 // }
 
 pub fn client_listener(listener: TcpListener) {
-    let mut client_list: Arc<RwLock<HashMap<u64, Client>>> = Arc::new(RwLock::new(HashMap::new()));
+    let client_list: Arc<RwLock<HashMap<u64, Client>>> = Arc::new(RwLock::new(HashMap::new()));
 
     for stream in listener.incoming() {
         let mut stream = stream.unwrap();
@@ -101,7 +101,7 @@ pub fn client_listener(listener: TcpListener) {
                     }
                 }
                 ReqType::Poll => {
-                    if let ReqBody::Poll { client_id } = req.req_body {
+                    if let ReqBody::Poll { client_id: _ } = req.req_body {
                         // let mut client_list = client_list_ref.read().unwrap();
                         //
                         // let message_dequeue = client_list.get(&client_id).unwrap().message_queue;

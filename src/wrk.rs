@@ -1,16 +1,16 @@
 use crate::state::{State, Mode};
-use std::sync::{RwLock, Arc, mpsc};
-use std::sync::mpsc::{Sender, Receiver};
+use std::sync::{RwLock, Arc};
+use std::sync::mpsc::{Receiver};
 use std::thread::park;
 use crate::req::{push_state::push_state, seq_recovery::seq_recovery};
-use crate::heartbeat::heartbeat;
-use crate::internal::ThreadSignal;
+
+
 use log::{debug, error, info, trace, warn};
-use std::collections::{VecDeque, BinaryHeap};
+use std::collections::{BinaryHeap};
 use chrono::{DateTime, Utc};
 use crate::proto::MessageWrapper;
 use enum_dispatch::enum_dispatch;
-use serde::export::fmt::Binary;
+
 use std::cmp::Ordering;
 
 #[derive(Copy, Clone, Eq, PartialEq)]
@@ -55,7 +55,7 @@ pub enum Pledge {
 pub fn wrk(state: Arc<RwLock<State>>, recevier: &Receiver<Pledge>) {
     let mut state_ref = state.write().unwrap();
 
-    let local_id = state_ref.self_node_information.id;
+    let _local_id = state_ref.self_node_information.id;
 
     let mut pledgeQueue: BinaryHeap<ResourceRequest> = BinaryHeap::new();
 
@@ -74,7 +74,7 @@ pub fn wrk(state: Arc<RwLock<State>>, recevier: &Receiver<Pledge>) {
     // release state lock
     drop(state_ref);
 
-    let mut clock = Utc::now();
+    let _clock = Utc::now();
 
     for pledge in recevier.iter() {
         match pledge {

@@ -29,7 +29,7 @@ use piko::proto::{set_sender_id};
 
 use fern::colors::{Color, ColoredLevelConfig};
 use log::{debug, error, info, trace, warn};
-use piko::client::client_listener;
+
 use piko::heartbeat::heartbeat;
 
 fn main() {
