@@ -2,7 +2,7 @@ use std::net::{TcpListener, TcpStream};
 
 use crate::state::{State, Node};
 
-use std::sync::mpsc::{Receiver};
+use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{Arc, RwLock};
 use std::io::{Read, Write};
 use crate::proto::{ProtoParcel, Type, Body};
@@ -11,6 +11,7 @@ use crate::internal::ThreadSignal;
 use crate::req::add_node::add_node;
 
 use log::{debug, error, info, trace, warn};
+use crate::wrk::Pledge;
 
 pub fn read_parcel(stream: &mut TcpStream) -> ProtoParcel {
     let count = stream.read_u8().unwrap();
@@ -59,7 +60,7 @@ pub fn ack(response: ProtoParcel, ack_id: u64) -> ThreadSignal {
     }
 }
 
-pub fn listener_thread(_recv: Receiver<ThreadSignal>, state: Arc<RwLock<State>>, socket: TcpListener) {
+pub fn listener_thread(state: Arc<RwLock<State>>, socket: TcpListener, sender: Sender<Pledge>,) {
     info!("Started Listener thread!");
 
     for stream in socket.incoming() {

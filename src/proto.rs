@@ -102,7 +102,7 @@ pub enum Body {
         message_id: u64
     },
 }
-
+#[derive(Clone)]
 pub struct MessageWrapper {
     pub message: Vec<u8>,
     pub sequence: u16,

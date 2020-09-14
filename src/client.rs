@@ -41,8 +41,8 @@ enum ReqBody {
 
 #[derive(Serialize, Deserialize)]
 pub struct ClientReq {
-    pub req_type: ReqType,
-    pub req_body: ReqBody,
+    req_type: ReqType,
+    req_body: ReqBody,
 }
 
 fn read_req(stream: &mut TcpStream) -> ClientReq {
@@ -65,13 +65,13 @@ fn write_bytes(stream: &mut TcpStream, buf: &[u8]) {
 ///
 ///  Tasked with dispatching messages to clients.
 ///
-fn client_dispatch(state: Arc<RwLock<State>>, client_list: Vec<Client>, message_receiver: Receiver<MessageWrapper>) {
-    for message in message_receiver.iter() {
-        client_list.into_par_iter().for_each(|mut client: Client| {
-            client.message_queue.push_back(message.message)
-        });
-    }
-}
+// fn client_dispatch(state: Arc<RwLock<State>>, client_list: Vec<Client>, message_receiver: Receiver<MessageWrapper>) {
+//     for message in message_receiver.iter() {
+//         client_list.into_par_iter().for_each_with(message, |m, mut client: Client| {
+//             client.message_queue.push_back(m.message)
+//         });
+//     }
+// }
 
 pub fn client_listener(listener: TcpListener) {
     let mut client_list: Arc<RwLock<HashMap<u64, Client>>> = Arc::new(RwLock::new(HashMap::new()));
@@ -102,19 +102,19 @@ pub fn client_listener(listener: TcpListener) {
                 }
                 ReqType::Poll => {
                     if let ReqBody::Poll { client_id } = req.req_body {
-                        let mut client_list = client_list_ref.read().unwrap();
-
-                        let mut message_dequeue = &client_list.get(&client_id).unwrap().message_queue;
-                        let message = message_dequeue.pop_front();
-                        match message {
-                            None => {
-                                // write empty buffer
-                                write_bytes(&mut stream, &[])
-                            }
-                            Some(message) => {
-                                write_bytes(&mut stream, message.as_slice())
-                            }
-                        }
+                        // let mut client_list = client_list_ref.read().unwrap();
+                        //
+                        // let message_dequeue = client_list.get(&client_id).unwrap().message_queue;
+                        // let message = message_dequeue.pop_front();
+                        // match message {
+                        //     None => {
+                        //         // write empty buffer
+                        //         write_bytes(&mut stream, &[])
+                        //     }
+                        //     Some(message) => {
+                        //         write_bytes(&mut stream, message.as_slice())
+                        //     }
+                        // }
                     }
                 }
                 ReqType::LongPoll => {}

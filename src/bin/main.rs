@@ -22,13 +22,15 @@ use std::path::{PathBuf};
 use piko::net::listener_thread;
 use std::sync::{Arc, mpsc, RwLock};
 use std::sync::mpsc::{Sender, Receiver};
-use piko::wrk::wrk;
+use piko::wrk::{wrk, Pledge};
 
 use piko::internal::ThreadSignal;
 use piko::proto::{set_sender_id};
 
 use fern::colors::{Color, ColoredLevelConfig};
 use log::{debug, error, info, trace, warn};
+use piko::client::client_listener;
+use piko::heartbeat::heartbeat;
 
 fn main() {
     setup_logger();
@@ -97,17 +99,23 @@ fn main() {
     set_sender_id(self_node_information.id);
 
 
-    let (state_sender, listener_receiver): (Sender<ThreadSignal>, Receiver<ThreadSignal>) = mpsc::channel();
-
+    // Initiate state
     let state_inner = State::new(self_node_information, neighbours);
     let state = Arc::new(RwLock::new(state_inner));
 
-    // start listener thread
+    // Start network listener thread
     let state_ref = state.clone();
-    rayon::spawn(move || listener_thread(listener_receiver, state_ref, listener));
-    // start monitor
-    info!("Started main worker thread!");
+    let (pledge_sender, work_receiver): (Sender<Pledge>, Receiver<Pledge>) = mpsc::channel();
+    rayon::spawn(move || listener_thread(state_ref, listener, pledge_sender));
+    // Start client listener thread
+    // rayon::spawn(move || client_listener())
+    // start heartbeat thread
+    let state_ref = state.clone();
+    let (_monitor_sender, monitor_receiver): (Sender<ThreadSignal>, Receiver<ThreadSignal>) = mpsc::channel();
+    rayon::spawn(move || heartbeat(state_ref, 5, 5, monitor_receiver));
 
+
+    info!("Started main worker thread!");
     loop {
         let state_lock = state.read().unwrap();
         let mode = &state_lock.self_node_information.mode;
@@ -119,7 +127,7 @@ fn main() {
             }
             Mode::Wrk => {
                 drop(state_lock);
-                wrk(state.clone(), state_sender.clone());
+                wrk(state.clone(), &work_receiver);
             }
             Mode::Err => {}
             Mode::Panic => {}
@@ -139,10 +147,8 @@ fn setup_logger() {
     let colors_line = ColoredLevelConfig::new()
         .error(Color::Red)
         .warn(Color::Yellow)
-        // we actually don't need to specify the color for debug and info, they are white by default
         .info(Color::White)
         .debug(Color::White)
-        // depending on the terminals color scheme, this is the same as the background color
         .trace(Color::BrightBlack);
 
     let colors_level = colors_line.clone().info(Color::Green);
@@ -160,18 +166,9 @@ fn setup_logger() {
                 message = message,
             ));
         })
-        // set the default log level. to filter out verbose log messages from dependencies, set
-        // this to Warn and overwrite the log level for your crate.
         .level(log::LevelFilter::Debug)
-        // change log levels for individual modules. Note: This looks for the record's target
-        // field which defaults to the module path but can be overwritten with the `target`
-        // parameter:
-        // `info!(target="special_target", "This log message is about special_target");`
-        .level_for("pretty_colored", log::LevelFilter::Trace)
         // output to stdout
         .chain(std::io::stdout())
         .apply()
         .unwrap();
-
-    debug!("finished setting up logging! yay!");
 }

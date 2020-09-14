@@ -10,6 +10,8 @@ use log::{debug, error, info, trace, warn};
     Retrieves sequence number from each host provided, returning the largest(most-latest)
  */
 pub fn seq_recovery(neighbour_list: &Vec<SocketAddr>) -> u8 {
+    if neighbour_list.len() == 0 { return 0; }
+
     let (sender, receiver): (Sender<u8>, Receiver<u8>) = mpsc::channel(); // setup channel for results
 
     let req = ProtoParcel::seq_req();
