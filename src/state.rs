@@ -40,11 +40,12 @@ pub struct State {
     pub self_node_information: Node,
     pub neighbours: HashMap<u16, Node>,
     pub sequence: u8,
+    pub current_lock: u64,
 }
 
 impl State {
     pub fn new(self_node_information: Node, neighbours: HashMap<u16, Node>) -> Self {
-        State { self_node_information, neighbours, sequence: 0 }
+        State { self_node_information, neighbours, sequence: 0, current_lock: 0 }
     }
 
     pub fn get_cluster_size(&self) -> usize {

@@ -28,7 +28,7 @@ use piko::internal::ThreadSignal;
 use piko::proto::{set_sender_id};
 
 use fern::colors::{Color, ColoredLevelConfig};
-use log::{debug, error, info, trace, warn};
+use log:: {info};
 
 use piko::heartbeat::heartbeat;
 

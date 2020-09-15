@@ -58,7 +58,7 @@ fn read_req(stream: &mut TcpStream) -> ClientReq {
 }
 
 fn write_bytes(stream: &mut TcpStream, buf: &[u8]) {
-    stream.write_all(buf);
+    stream.write_all(buf).unwrap();
 }
 
 

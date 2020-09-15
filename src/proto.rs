@@ -11,6 +11,7 @@ use rand::{random};
 
 use std::sync::Mutex;
 use lazy_static::lazy_static;
+use chrono::{DateTime, Utc};
 
 
 static _PROTO_VERSION: &str = "1.0";
@@ -28,16 +29,23 @@ pub fn set_sender_id(id: u16) {
 #[derive(FromPrimitive, ToPrimitive, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Type {
     ProtoError = 0,
+
     DscReq = 1,
     DscRes = 2,
+
     SeqReq = 3,
     SeqRes = 4,
+
     StateChange = 5,
+
     Ping = 6,
     Pong = 7,
-    SequenceLock = 8,
-    Message = 9,
+
+    ResourceRequest = 8,
+    ResourceRelease = 9,
+
     Ack = 10,
+
     AddNode = 11,
 }
 
@@ -52,10 +60,10 @@ impl Display for Type {
             Type::StateChange => write!(f, "{}", "StateChange"),
             Type::Ping => write!(f, "{}", "Ping"),
             Type::Pong => write!(f, "{}", "Pong"),
-            Type::SequenceLock => write!(f, "{}", "SequenceLock"),
-            Type::Message => write!(f, "{}", "Message"),
             Type::Ack => write!(f, "{}", "Ack"),
-            Type::AddNode => write!(f, "{}", "AddNode")
+            Type::AddNode => write!(f, "{}", "AddNode"),
+            Type::ResourceRelease => write!(f, "{}", "ResourceRelease"),
+            Type::ResourceRequest => write!(f, "{}", "ResourceRequest")
         }
     }
 }
@@ -92,21 +100,29 @@ pub enum Body {
         mode: Mode
     },
 
-    Message {
+    ResourceRequest {
+        timestamp: DateTime<Utc>,
+        message_hash: u64,
         sequence: u16,
-        bytes: Vec<u8>,
-        sender: u16,
+    },
+
+    ResourceRelease {
+        timestamp: DateTime<Utc>,
+        message_hash: u64,
+        sequence: u16,
+        message: Vec<u8>,
     },
 
     Ack {
         message_id: u64
     },
 }
+
 #[derive(Clone)]
 pub struct MessageWrapper {
     pub message: Vec<u8>,
     pub sequence: u16,
-    pub receiver_mask: u32
+    pub receiver_mask: u32,
 }
 
 
@@ -120,8 +136,6 @@ pub struct ProtoParcel {
     pub is_response: bool,
     // type of packet
     pub parcel_type: Type,
-    // size of application-specific data in bytes
-    pub size: u16,
     // message body
     pub body: Body,
 }
@@ -133,7 +147,6 @@ impl ProtoParcel {
             sender_id: *SENDER.lock().unwrap(),
             is_response: false,
             parcel_type: Type::DscReq,
-            size: 0,
             body: Body::DscReq { identity: self_node_information },
         }
     }
@@ -144,7 +157,6 @@ impl ProtoParcel {
             sender_id: *SENDER.lock().unwrap(),
             is_response: true,
             parcel_type: Type::DscRes,
-            size: 0,
             body: Body::DscRes { neighbours: neighbours_information },
         }
     }
@@ -155,7 +167,6 @@ impl ProtoParcel {
             sender_id: *SENDER.lock().unwrap(),
             is_response: false,
             parcel_type: Type::SeqReq,
-            size: 0,
             body: Body::Empty,
         }
     }
@@ -166,7 +177,6 @@ impl ProtoParcel {
             sender_id: *SENDER.lock().unwrap(),
             is_response: true,
             parcel_type: Type::SeqRes,
-            size: 0,
             body: Body::SeqRes { seq_number },
         }
     }
@@ -177,7 +187,6 @@ impl ProtoParcel {
             sender_id: *SENDER.lock().unwrap(),
             is_response: true,
             parcel_type: Type::AddNode,
-            size: 0,
             body: Body::AddNode { nodes },
         }
     }
@@ -188,7 +197,6 @@ impl ProtoParcel {
             sender_id: *SENDER.lock().unwrap(),
             is_response: false,
             parcel_type: Type::StateChange,
-            size: 0,
             body: Body::StateChange { mode },
         }
     }
@@ -199,7 +207,6 @@ impl ProtoParcel {
             sender_id: *SENDER.lock().unwrap(),
             is_response: false,
             parcel_type: Type::Ping,
-            size: 0,
             body: Body::Empty,
         }
     }
@@ -210,7 +217,6 @@ impl ProtoParcel {
             sender_id: *SENDER.lock().unwrap(),
             is_response: true,
             parcel_type: Type::Pong,
-            size: 0,
             body: Body::Empty,
         }
     }
@@ -221,8 +227,43 @@ impl ProtoParcel {
             sender_id: *SENDER.lock().unwrap(),
             is_response: true,
             parcel_type: Type::Ack,
-            size: 0,
             body: Body::Ack { message_id },
+        }
+    }
+    pub fn resource_request(message_hash: u64, timestamp: DateTime<Utc>, sequence: u16) -> ProtoParcel {
+        ProtoParcel {
+            id: generate_id(),
+            sender_id: *SENDER.lock().unwrap(),
+            is_response: false,
+            parcel_type: Type::ResourceRequest,
+            body: Body::ResourceRequest {
+                timestamp,
+                message_hash,
+                sequence ,
+            },
+        }
+    }
+    pub fn resource_release(message_hash: u64, timestamp: DateTime<Utc>, sequence: u16, message: Vec<u8>) -> ProtoParcel {
+        ProtoParcel {
+            id: generate_id(),
+            sender_id: *SENDER.lock().unwrap(),
+            is_response: false,
+            parcel_type: Type::ResourceRelease,
+            body: Body::ResourceRelease {
+                timestamp,
+                message_hash,
+                sequence ,
+                message,
+            },
+        }
+    }
+    pub fn proto_error() ->ProtoParcel {
+        ProtoParcel {
+            id: generate_id(),
+            sender_id: *SENDER.lock().unwrap(),
+            is_response: true,
+            parcel_type: Type::ProtoError,
+            body: Body::Empty
         }
     }
 }

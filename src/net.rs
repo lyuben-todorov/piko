@@ -5,13 +5,13 @@ use crate::state::{State, Node};
 use std::sync::mpsc::{Sender};
 use std::sync::{Arc, RwLock};
 use std::io::{Read, Write};
-use crate::proto::{ProtoParcel, Type, Body};
+use crate::proto::{ProtoParcel, Type, Body, MessageWrapper};
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use crate::internal::ThreadSignal;
 use crate::req::add_node::add_node;
 
 use log::{debug, error, info, trace, warn};
-use crate::wrk::Pledge;
+use crate::wrk::{Pledge, ResourceRequest, ResourceRelease};
 
 pub fn read_parcel(stream: &mut TcpStream) -> ProtoParcel {
     let count = stream.read_u8().unwrap();
@@ -60,13 +60,16 @@ pub fn ack(response: ProtoParcel, ack_id: u64) -> ThreadSignal {
     }
 }
 
-pub fn listener_thread(state: Arc<RwLock<State>>, socket: TcpListener, _sender: Sender<Pledge>,) {
+pub fn listener_thread(state: Arc<RwLock<State>>, socket: TcpListener, sender: Sender<Pledge>) {
     info!("Started Listener thread!");
+
 
     for stream in socket.incoming() {
         let mut stream = stream.unwrap();
 
-        let state_ref = state.clone();
+        let state_ref = Arc::clone(&state);
+
+        let sender_ref = sender.clone();
 
         rayon::spawn(move || {
             let parcel = read_parcel(&mut stream);
@@ -78,19 +81,19 @@ pub fn listener_thread(state: Arc<RwLock<State>>, socket: TcpListener, _sender: 
 
                         let mut neighbours: Vec<Node> = Vec::new();
 
-                        let mut state = state_ref.write().unwrap(); // acquire write lock
-                        let state_neighbours: Vec<Node> = state.neighbours.values().cloned().collect();
-                        let self_node = state.self_node_information.clone();
+                        let mut state_ref = state_ref.write().unwrap(); // acquire write lock
+                        let state_neighbours: Vec<Node> = state_ref.neighbours.values().cloned().collect();
+                        let self_node = state_ref.self_node_information.clone();
 
                         // Push found node to neighbours
                         let mut update: Vec<Node> = Vec::new();
                         update.push(identity.clone());
                         info!("Pushing new node to neighbours!");
-                        add_node(&state.get_neighbour_addrs(), update);
+                        add_node(&state_ref.get_neighbour_addrs(), update);
 
                         info!("Adding {} to state", identity.name);
-                        state.add_neighbour(identity); // add node to state after neighbours are cloned
-                        drop(state); // drop write lock before tcp writes
+                        state_ref.add_neighbour(identity); // add node to state after neighbours are cloned
+                        drop(state_ref); // drop write lock before tcp writes
 
                         neighbours.extend_from_slice(state_neighbours.as_slice());
                         neighbours.push(self_node);
@@ -130,8 +133,8 @@ pub fn listener_thread(state: Arc<RwLock<State>>, socket: TcpListener, _sender: 
                             node.mode = mode
                         });
                         drop(state);
-                        let parcel = ProtoParcel::ack(parcel.id);
-                        write_parcel(&mut stream, &parcel);
+                        let ack = ProtoParcel::ack(parcel.id);
+                        write_parcel(&mut stream, &ack);
                     }
                 }
                 Type::AddNode => {
@@ -142,8 +145,53 @@ pub fn listener_thread(state: Arc<RwLock<State>>, socket: TcpListener, _sender: 
                             state.add_neighbour(node);
                         }
                         drop(state);
+                        let ack = ProtoParcel::ack(parcel.id);
+                        write_parcel(&mut stream, &ack);
+                    }
+                }
+                Type::ResourceRequest => {
+                    if let Body::ResourceRequest { message_hash, sequence, timestamp } = parcel.body {
+                        let resource_pledge: ResourceRequest = ResourceRequest {
+                            owner: parcel.sender_id,
+                            message_hash,
+                            timestamp,
+                            sequence,
+                        };
+
                         let parcel = ProtoParcel::ack(parcel.id);
                         write_parcel(&mut stream, &parcel);
+
+                        sender_ref.send(Pledge::ResourceRequest(resource_pledge)).unwrap();
+                    }
+                }
+                Type::ResourceRelease => {
+                    if let Body::ResourceRelease { timestamp, message_hash, sequence, message } = parcel.body {
+                        let state = state_ref.read().unwrap();
+
+                        if state.current_lock == message_hash {
+                            let resource_release: ResourceRelease = ResourceRelease {
+                                owner: parcel.sender_id,
+                                message_hash,
+                                timestamp,
+                                message: MessageWrapper {
+                                    message,
+                                    sequence,
+                                    receiver_mask: 0,
+                                },
+                                local: false,
+                                sequence,
+                            };
+
+
+                            let parcel = ProtoParcel::ack(parcel.id);
+                            write_parcel(&mut stream, &parcel);
+
+                            sender_ref.send(Pledge::ResourceRelease(resource_release)).unwrap();
+                        } else {
+                            warn!("Neighbour attempted to release resource without lock");
+                            let parcel = ProtoParcel::proto_error();
+                            write_parcel(&mut stream, &parcel);
+                        }
                     }
                 }
                 _ => {

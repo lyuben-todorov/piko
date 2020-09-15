@@ -50,8 +50,6 @@ pub struct ProtoParcel {
     pub parcel_type: Type,
     // id of sender node
     pub id: u16,
-    // size of application-specific data in bytes
-    pub size: u16,
     // message body
     pub body: Body,
 }

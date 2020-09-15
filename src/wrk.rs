@@ -15,10 +15,10 @@ use std::cmp::Ordering;
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct ResourceRequest {
-    owner: u16,
-    message_hash:u64,
-    timestamp: DateTime<Utc>,
-    sequence: u16,
+    pub owner: u16,
+    pub message_hash:u64,
+    pub timestamp: DateTime<Utc>,
+    pub sequence: u16,
 }
 
 impl Ord for ResourceRequest {
@@ -34,12 +34,12 @@ impl PartialOrd for ResourceRequest {
 }
 
 pub struct ResourceRelease {
-    owner: u16,
-    message_hash:u64,
-    timestamp: DateTime<Utc>,
-    message: MessageWrapper,
-    local: bool,
-    sequence: u16,
+    pub owner: u16,
+    pub message_hash:u64,
+    pub timestamp: DateTime<Utc>,
+    pub message: MessageWrapper,
+    pub local: bool,
+    pub sequence: u16,
 }
 
 #[enum_dispatch]
@@ -52,12 +52,12 @@ pub enum Pledge {
 ///
 /// Tasked with maintaining protocol consistency
 ///
-pub fn wrk(state: Arc<RwLock<State>>, recevier: &Receiver<Pledge>) {
+pub fn wrk(state: Arc<RwLock<State>>, receiver: &Receiver<Pledge>) {
     let mut state_ref = state.write().unwrap();
 
     let _local_id = state_ref.self_node_information.id;
 
-    let mut pledgeQueue: BinaryHeap<ResourceRequest> = BinaryHeap::new();
+    let mut pledge_queue: BinaryHeap<ResourceRequest> = BinaryHeap::new();
 
     if state_ref.get_cluster_size() == 0 {}
     info!("Acquiring sequence number");
@@ -76,13 +76,13 @@ pub fn wrk(state: Arc<RwLock<State>>, recevier: &Receiver<Pledge>) {
 
     let _clock = Utc::now();
 
-    for pledge in recevier.iter() {
+    for pledge in receiver.iter() {
         match pledge {
             ///
             /// Upon resource request, the node pushes the request to the priority queue.
             ///
             Pledge::ResourceRequest(req) => {
-                    pledgeQueue.push(req);
+                    pledge_queue.push(req);
             }
             ///
             /// Upon resource release the node checks the owner of the next ResourceRequest.
@@ -91,11 +91,11 @@ pub fn wrk(state: Arc<RwLock<State>>, recevier: &Receiver<Pledge>) {
             /// with the message and pops its message queue.
             ///
             Pledge::ResourceRelease(rel) => {
-                let req = pledgeQueue.peek().unwrap();
+                let req = pledge_queue.peek().unwrap();
                 if req.message_hash == rel.message_hash && rel.timestamp > req.timestamp {
-                    // release resource
-                } else {
+                    let req = pledge_queue.pop().unwrap();
 
+                } else {
                 }
             }
         }
