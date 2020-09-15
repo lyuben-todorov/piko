@@ -93,7 +93,7 @@ pub fn wrk(state: Arc<RwLock<State>>, receiver: &Receiver<Pledge>) {
             Pledge::ResourceRelease(rel) => {
                 let req = pledge_queue.peek().unwrap();
                 if req.message_hash == rel.message_hash && rel.timestamp > req.timestamp {
-                    let req = pledge_queue.pop().unwrap();
+                    let _req = pledge_queue.pop().unwrap();
                 } else {}
             }
         }

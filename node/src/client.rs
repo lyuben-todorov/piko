@@ -6,14 +6,14 @@ use std::net::{TcpListener, TcpStream};
 use serde::{Serialize, Deserialize};
 use byteorder::ReadBytesExt;
 use std::io::{Read, Write};
-use crate::state::State;
-use rayon::prelude::*;
-use std::sync::mpsc::{Receiver, Sender};
-use crate::proto::MessageWrapper;
+
+
+use std::sync::mpsc::{Sender};
+
 use crate::wrk::{Pledge, ResourceRequest};
 use sha2::{Sha256, Digest};
-use sha2::digest::generic_array::GenericArray;
-use chrono::{DateTime, Utc};
+
+use chrono::{Utc};
 
 struct Client<'a> {
     identity: u64,
@@ -116,7 +116,7 @@ pub fn client_listener(listener: TcpListener, sender: Sender<Pledge>) {
                 }
                 ReqType::LongPoll => {}
                 ReqType::Publish => {
-                    if let ReqBody::Publish { client_id, message } = req.req_body {
+                    if let ReqBody::Publish { client_id: _, message } = req.req_body {
                         let hash: [u8; 32] = Sha256::digest(message.as_slice()).into();
                         let pledge: ResourceRequest = ResourceRequest {
                             owner: *crate::proto::SENDER.lock().unwrap(),
