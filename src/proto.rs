@@ -17,7 +17,7 @@ use chrono::{DateTime, Utc};
 static _PROTO_VERSION: &str = "1.0";
 
 lazy_static! {
-    static ref SENDER: Mutex<u16> = Mutex::new(0);
+    pub static ref SENDER: Mutex<u16> = Mutex::new(0);
 }
 
 pub fn set_sender_id(id: u16) {
@@ -102,13 +102,13 @@ pub enum Body {
 
     ResourceRequest {
         timestamp: DateTime<Utc>,
-        message_hash: u64,
+        message_hash: [u8; 32],
         sequence: u16,
     },
 
     ResourceRelease {
         timestamp: DateTime<Utc>,
-        message_hash: u64,
+        message_hash: [u8; 32],
         sequence: u16,
         message: Vec<u8>,
     },
@@ -230,7 +230,7 @@ impl ProtoParcel {
             body: Body::Ack { message_id },
         }
     }
-    pub fn resource_request(message_hash: u64, timestamp: DateTime<Utc>, sequence: u16) -> ProtoParcel {
+    pub fn resource_request(message_hash: [u8; 32], timestamp: DateTime<Utc>, sequence: u16) -> ProtoParcel {
         ProtoParcel {
             id: generate_id(),
             sender_id: *SENDER.lock().unwrap(),
@@ -239,11 +239,11 @@ impl ProtoParcel {
             body: Body::ResourceRequest {
                 timestamp,
                 message_hash,
-                sequence ,
+                sequence,
             },
         }
     }
-    pub fn resource_release(message_hash: u64, timestamp: DateTime<Utc>, sequence: u16, message: Vec<u8>) -> ProtoParcel {
+    pub fn resource_release(message_hash: [u8; 32], timestamp: DateTime<Utc>, sequence: u16, message: Vec<u8>) -> ProtoParcel {
         ProtoParcel {
             id: generate_id(),
             sender_id: *SENDER.lock().unwrap(),
@@ -252,18 +252,18 @@ impl ProtoParcel {
             body: Body::ResourceRelease {
                 timestamp,
                 message_hash,
-                sequence ,
+                sequence,
                 message,
             },
         }
     }
-    pub fn proto_error() ->ProtoParcel {
+    pub fn proto_error() -> ProtoParcel {
         ProtoParcel {
             id: generate_id(),
             sender_id: *SENDER.lock().unwrap(),
             is_response: true,
             parcel_type: Type::ProtoError,
-            body: Body::Empty
+            body: Body::Empty,
         }
     }
 }

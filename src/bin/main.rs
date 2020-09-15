@@ -28,9 +28,10 @@ use piko::internal::ThreadSignal;
 use piko::proto::{set_sender_id};
 
 use fern::colors::{Color, ColoredLevelConfig};
-use log:: {info};
+use log::{info};
 
 use piko::heartbeat::heartbeat;
+use piko::client::client_listener;
 
 fn main() {
     setup_logger();
@@ -57,13 +58,18 @@ fn main() {
     let name = settings
         .get_str("node.name")
         .expect("Missing node name.");
-
-    let port = settings
-        .get_int("node.port")
-        .expect("Missing node port.");
     let host_name = settings
         .get_str("node.host")
         .expect("Missing node hostname");
+    let port = settings
+        .get_int("node.port")
+        .expect("Missing node port.");
+    let client_host_name = settings
+        .get_str("node.client_host")
+        .expect("Missing node client hostname");
+    let client_port = settings
+        .get_int("node.client_port")
+        .expect("Missing node port.");
     let thread_count = settings
         .get_int("node.thread_count")
         .expect("Missing node thread_count.");
@@ -84,15 +90,25 @@ fn main() {
 
     let addr = Ipv4Addr::from_str(&host_name).expect("Error parsing host name");
     let address = SocketAddr::from(SocketAddrV4::new(addr, port as u16));
-    let listener = TcpListener::bind(address);
-    let listener = match listener {
+
+    let cluster_socket = match TcpListener::bind(address) {
         Ok(listener) => {
-            info!("Bound to socket {}.", listener.local_addr().unwrap());
+            info!("Listening to cluster on {}.", listener.local_addr().unwrap());
             listener
         }
-        Err(error) => panic!("Error during port binding: {}", error),
+        Err(error) => panic!("Error binding cluster socket: {}", error),
     };
 
+    let client_addr = Ipv4Addr::from_str(&client_host_name).expect("Error parsing host name");
+    let client_address = SocketAddr::from(SocketAddrV4::new(client_addr, client_port as u16));
+
+    let client_socket = match TcpListener::bind(client_address) {
+        Ok(listener) => {
+            info!("Listening to clients on {}.", listener.local_addr().unwrap());
+            listener
+        }
+        Err(error) => panic!("Error binding client socket: {}", error),
+    };
 
     let neighbours = HashMap::<u16, Node>::new();
     let self_node_information = Node::new(name, Mode::Dsc, address);
@@ -106,9 +122,11 @@ fn main() {
     // Start network listener thread
     let state_ref = state.clone();
     let (pledge_sender, work_receiver): (Sender<Pledge>, Receiver<Pledge>) = mpsc::channel();
-    rayon::spawn(move || listener_thread(state_ref, listener, pledge_sender));
+    let tx = pledge_sender.clone();
+    rayon::spawn(move || listener_thread(state_ref, cluster_socket, tx));
     // Start client listener thread
-    // rayon::spawn(move || client_listener())
+    let tx = pledge_sender.clone();
+    rayon::spawn(move || client_listener(client_socket, tx));
     // start heartbeat thread
     let state_ref = state.clone();
     let (_monitor_sender, monitor_receiver): (Sender<ThreadSignal>, Receiver<ThreadSignal>) = mpsc::channel();

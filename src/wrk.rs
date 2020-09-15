@@ -16,7 +16,7 @@ use std::cmp::Ordering;
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct ResourceRequest {
     pub owner: u16,
-    pub message_hash:u64,
+    pub message_hash: [u8; 32],
     pub timestamp: DateTime<Utc>,
     pub sequence: u16,
 }
@@ -35,7 +35,7 @@ impl PartialOrd for ResourceRequest {
 
 pub struct ResourceRelease {
     pub owner: u16,
-    pub message_hash:u64,
+    pub message_hash: [u8; 32],
     pub timestamp: DateTime<Utc>,
     pub message: MessageWrapper,
     pub local: bool,
@@ -82,7 +82,7 @@ pub fn wrk(state: Arc<RwLock<State>>, receiver: &Receiver<Pledge>) {
             /// Upon resource request, the node pushes the request to the priority queue.
             ///
             Pledge::ResourceRequest(req) => {
-                    pledge_queue.push(req);
+                pledge_queue.push(req);
             }
             ///
             /// Upon resource release the node checks the owner of the next ResourceRequest.
@@ -94,9 +94,7 @@ pub fn wrk(state: Arc<RwLock<State>>, receiver: &Receiver<Pledge>) {
                 let req = pledge_queue.peek().unwrap();
                 if req.message_hash == rel.message_hash && rel.timestamp > req.timestamp {
                     let req = pledge_queue.pop().unwrap();
-
-                } else {
-                }
+                } else {}
             }
         }
     }

@@ -2,17 +2,22 @@ use std::sync::{RwLock, Arc};
 
 use std::collections::{VecDeque, HashMap};
 
-
-
-
 use std::net::{TcpListener, TcpStream};
 use serde::{Serialize, Deserialize};
 use byteorder::ReadBytesExt;
 use std::io::{Read, Write};
+use crate::state::State;
+use rayon::prelude::*;
+use std::sync::mpsc::{Receiver, Sender};
+use crate::proto::MessageWrapper;
+use crate::wrk::{Pledge, ResourceRequest};
+use sha2::{Sha256, Digest};
+use sha2::digest::generic_array::GenericArray;
+use chrono::{DateTime, Utc};
 
-struct Client {
+struct Client<'a> {
     identity: u64,
-    message_queue: VecDeque<Vec<u8>>,
+    message_queue: VecDeque<&'a Vec<u8>>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -21,6 +26,7 @@ enum ReqType {
     LongPoll,
     Subscribe,
     Unsubscribe,
+    Publish,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -36,6 +42,10 @@ enum ReqBody {
     },
     Unsubscribe {
         client_id: u64
+    },
+    Publish {
+        client_id: u64,
+        message: Vec<u8>,
     },
 }
 
@@ -61,63 +71,63 @@ fn write_bytes(stream: &mut TcpStream, buf: &[u8]) {
     stream.write_all(buf).unwrap();
 }
 
-
-///
-///  Tasked with dispatching messages to clients.
-///
-// fn client_dispatch(state: Arc<RwLock<State>>, client_list: Vec<Client>, message_receiver: Receiver<MessageWrapper>) {
-//     for message in message_receiver.iter() {
-//         client_list.into_par_iter().for_each_with(message, |m, mut client: Client| {
-//             client.message_queue.push_back(m.message)
-//         });
-//     }
-// }
-
-pub fn client_listener(listener: TcpListener) {
-    let client_list: Arc<RwLock<HashMap<u64, Client>>> = Arc::new(RwLock::new(HashMap::new()));
+pub fn client_listener(listener: TcpListener, sender: Sender<Pledge>) {
+    let client_list: Arc<RwLock<HashMap<u64, RwLock<Client>>>> = Arc::new(RwLock::new(HashMap::<u64, RwLock<Client>>::new()));
 
     for stream in listener.incoming() {
         let mut stream = stream.unwrap();
 
-        let client_list_ref = client_list.clone();
+        let client_list = client_list.clone();
+        let sender = sender.clone();
         rayon::spawn(move || {
             let req = read_req(&mut stream);
+
             match req.req_type {
                 ReqType::Subscribe => {
                     if let ReqBody::Subscribe { client_id } = req.req_body {
                         let client: Client = Client {
                             identity: client_id,
-                            message_queue: VecDeque::<Vec<u8>>::new(),
+                            message_queue: VecDeque::<&Vec<u8>>::new(),
                         };
 
-                        let mut client_list = client_list_ref.write().unwrap();
-                        client_list.insert(client_id, client);
+                        client_list.write().unwrap().insert(client_id, RwLock::from(client));
                     }
                 }
                 ReqType::Unsubscribe => {
                     if let ReqBody::Unsubscribe { client_id } = req.req_body {
-                        let mut client_list = client_list_ref.write().unwrap();
-                        client_list.remove(&client_id);
+                        client_list.write().unwrap().remove(&client_id);
                     }
                 }
                 ReqType::Poll => {
-                    if let ReqBody::Poll { client_id: _ } = req.req_body {
-                        // let mut client_list = client_list_ref.read().unwrap();
-                        //
-                        // let message_dequeue = client_list.get(&client_id).unwrap().message_queue;
-                        // let message = message_dequeue.pop_front();
-                        // match message {
-                        //     None => {
-                        //         // write empty buffer
-                        //         write_bytes(&mut stream, &[])
-                        //     }
-                        //     Some(message) => {
-                        //         write_bytes(&mut stream, message.as_slice())
-                        //     }
-                        // }
+                    if let ReqBody::Poll { client_id } = req.req_body {
+                        let client_list = client_list.read().unwrap();
+                        let mut message_dequeue = client_list.get(&client_id).unwrap().write().unwrap();
+                        let message = message_dequeue.message_queue.pop_front();
+                        match message {
+                            None => {
+                                // write empty buffer
+                                write_bytes(&mut stream, &[])
+                            }
+                            Some(message) => {
+                                write_bytes(&mut stream, message.as_slice())
+                            }
+                        }
                     }
                 }
                 ReqType::LongPoll => {}
+                ReqType::Publish => {
+                    if let ReqBody::Publish { client_id, message } = req.req_body {
+                        let hash: [u8; 32] = Sha256::digest(message.as_slice()).into();
+                        let pledge: ResourceRequest = ResourceRequest {
+                            owner: *crate::proto::SENDER.lock().unwrap(),
+                            message_hash: hash,
+                            timestamp: Utc::now(),
+                            sequence: 0
+                        };
+
+                        sender.send(Pledge::ResourceRequest(pledge));
+                    }
+                }
             }
         })
     }
