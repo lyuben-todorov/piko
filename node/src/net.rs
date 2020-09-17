@@ -2,18 +2,18 @@ use std::net::{TcpListener, TcpStream};
 
 use crate::state::{State, Node};
 
-use std::sync::mpsc::{Sender};
+
 use std::sync::{Arc, RwLock, Mutex};
 use std::io::{Read, Write};
-use crate::proto::{ProtoParcel, Type, Body, MessageWrapper, Pledge, ResourceRequest, ResourceRelease};
+use crate::proto::{ProtoParcel, Type, Body, MessageWrapper, ResourceRequest, ResourceRelease};
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use crate::internal::ThreadSignal;
 use crate::req::add_node::add_node;
 
 use log::{debug, error, info, trace, warn};
 use std::collections::{BinaryHeap, HashMap};
-use sha2::{Sha256, Digest};
-use chrono::Utc;
+use sha2::{Digest};
+
 
 pub fn read_parcel(stream: &mut TcpStream) -> ProtoParcel {
     let count = stream.read_u8().unwrap();
@@ -65,7 +65,7 @@ pub fn is_acked(response: ProtoParcel, ack_id: u64) -> ThreadSignal {
 pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, pledge_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>>, f_access: Arc<Mutex<bool>>) {
     info!("Started Listener thread!");
 
-    let mut pending_messages: Arc<HashMap<u16, MessageWrapper>> = Arc::new(HashMap::new());
+    let _pending_messages: Arc<HashMap<u16, MessageWrapper>> = Arc::new(HashMap::new());
 
     for stream in socket.incoming() {
         let mut stream = stream.unwrap();
@@ -180,7 +180,7 @@ pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, pledge_qu
                         let state = state_ref.read().unwrap();
 
                         if state.current_lock == message_hash {
-                            let resource_release: ResourceRelease = ResourceRelease {
+                            let _resource_release: ResourceRelease = ResourceRelease {
                                 owner: parcel.sender_id,
                                 message_hash,
                                 timestamp,

@@ -7,7 +7,7 @@ use serde::{Serialize, Deserialize};
 use byteorder::ReadBytesExt;
 use std::io::{Read, Write};
 
-use std::sync::mpsc::{Sender};
+
 
 use sha2::{Sha256, Digest};
 
@@ -74,7 +74,7 @@ fn write_bytes(stream: &mut TcpStream, buf: &[u8]) {
     stream.write_all(buf).unwrap();
 }
 
-pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>,  pledge_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>>, f_access: Arc<Mutex<bool>>) {
+pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>,  pledge_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>>, _f_access: Arc<Mutex<bool>>) {
     let client_list: Arc<RwLock<HashMap<u64, RwLock<Client>>>> = Arc::new(RwLock::new(HashMap::<u64, RwLock<Client>>::new()));
 
     for stream in listener.incoming() {
@@ -141,7 +141,7 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>,  pledge
                         drop(pledge_queue);
 
                         publish(&state_ref.get_neighbour_addrs(), req);
-                        let release: ResourceRelease = ResourceRelease {
+                        let _release: ResourceRelease = ResourceRelease {
                             owner: *crate::proto::SENDER.lock().unwrap(),
                             message_hash,
                             timestamp,
