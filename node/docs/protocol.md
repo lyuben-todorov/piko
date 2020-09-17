@@ -9,8 +9,14 @@ resource ownership to the node who requested it. The node with resource ownershi
 Client pushes message to node `A`. `A` sends its resource lock to every neighbouring node. 
 Upon receiving a resource lock, each node inserts it into its resource queue and acknowledges the request.
 Upon receiving all acknowledges, `A` inserts the lock into its own resource queue.  
+
 ### ResourceRelease
-Each node should always operate on the same `root` resource lock of the priority queue.   
+Each node should always operate on the same `root` resource lock of the priority queue. 
+
+### Resolving concurrent requests
+Whenever a node is in the process of acknowledging a Resource Request, it locks its `f_access` mutex. Any other request
+or outgoing request attempts first tries to acquire `f_access` lock before entering its critical section.  
+
 ### What shouldn't happen
 * Node A receives ResourceRequest for message `a` at `t` and dispatches its acknowledgement at a later time `t'`. 
 *Between* `t` and `t'` a local client tries to send a message `b` to the cluster.    
@@ -33,7 +39,7 @@ node's neighbour list is empty, in which case it goes straight into `Wrk`.
 After discovery, a node can send a `SeqRes` to each of its neighbours. Each one responds with their `SEQ` number.
 
 ### Work phase
-A worker keeps track of its neighbours by sending a a heartbeat to each of its working neighbours on a specified timeout. 
+A worker keeps track of its neighbours by sending a heartbeat to each of its working neighbours on a specified timeout. 
 If a node goes silent for more a number of repeated unacknowledged pings, it is removed from the cluster.
 
 ### State change

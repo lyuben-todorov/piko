@@ -3,15 +3,17 @@ use std::net::{TcpListener, TcpStream};
 use crate::state::{State, Node};
 
 use std::sync::mpsc::{Sender};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock, Mutex};
 use std::io::{Read, Write};
-use crate::proto::{ProtoParcel, Type, Body, MessageWrapper};
+use crate::proto::{ProtoParcel, Type, Body, MessageWrapper, Pledge, ResourceRequest, ResourceRelease};
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use crate::internal::ThreadSignal;
 use crate::req::add_node::add_node;
 
 use log::{debug, error, info, trace, warn};
-use crate::wrk::{Pledge, ResourceRequest, ResourceRelease};
+use std::collections::{BinaryHeap, HashMap};
+use sha2::{Sha256, Digest};
+use chrono::Utc;
 
 pub fn read_parcel(stream: &mut TcpStream) -> ProtoParcel {
     let count = stream.read_u8().unwrap();
@@ -35,7 +37,7 @@ pub fn write_parcel(stream: &mut TcpStream, parcel: &ProtoParcel) {
     stream.write_all(buf).unwrap();
 }
 
-pub fn ack(response: ProtoParcel, ack_id: u64) -> ThreadSignal {
+pub fn is_acked(response: ProtoParcel, ack_id: u64) -> ThreadSignal {
     match response.parcel_type {
         Type::Ack => {
             if let Body::Ack { message_id } = response.body {
@@ -60,17 +62,17 @@ pub fn ack(response: ProtoParcel, ack_id: u64) -> ThreadSignal {
     }
 }
 
-pub fn listener_thread(state: Arc<RwLock<State>>, socket: TcpListener, sender: Sender<Pledge>) {
+pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, pledge_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>>, f_access: Arc<Mutex<bool>>) {
     info!("Started Listener thread!");
 
+    let mut pending_messages: Arc<HashMap<u16, MessageWrapper>> = Arc::new(HashMap::new());
 
     for stream in socket.incoming() {
         let mut stream = stream.unwrap();
 
         let state_ref = Arc::clone(&state);
-
-        let sender_ref = sender.clone();
-
+        let f_access = Arc::clone(&f_access);
+        let pledge_queue = Arc::clone(&pledge_queue);
         rayon::spawn(move || {
             let parcel = read_parcel(&mut stream);
 
@@ -151,6 +153,10 @@ pub fn listener_thread(state: Arc<RwLock<State>>, socket: TcpListener, sender: S
                 }
                 Type::ResourceRequest => {
                     if let Body::ResourceRequest { message_hash, sequence, timestamp } = parcel.body {
+                        info!("Processing Resource Request with id {} from node {}", parcel.id, parcel.sender_id);
+
+                        let lock = f_access.lock().unwrap();
+
                         let resource_pledge: ResourceRequest = ResourceRequest {
                             owner: parcel.sender_id,
                             message_hash,
@@ -158,14 +164,19 @@ pub fn listener_thread(state: Arc<RwLock<State>>, socket: TcpListener, sender: S
                             sequence,
                         };
 
-                        let parcel = ProtoParcel::ack(parcel.id);
-                        write_parcel(&mut stream, &parcel);
+                        let mut pledge_queue = pledge_queue.lock().unwrap();
+                        pledge_queue.push(resource_pledge);
+                        drop(pledge_queue);
 
-                        sender_ref.send(Pledge::ResourceRequest(resource_pledge)).unwrap();
+                        let ack = ProtoParcel::ack(parcel.id);
+                        write_parcel(&mut stream, &ack);
+                        drop(lock);
                     }
                 }
                 Type::ResourceRelease => {
                     if let Body::ResourceRelease { timestamp, message_hash, sequence, message } = parcel.body {
+                        info!("Processing Resource Release with id {} from node {}", parcel.id, parcel.sender_id);
+
                         let state = state_ref.read().unwrap();
 
                         if state.current_lock == message_hash {
@@ -186,7 +197,6 @@ pub fn listener_thread(state: Arc<RwLock<State>>, socket: TcpListener, sender: S
                             let parcel = ProtoParcel::ack(parcel.id);
                             write_parcel(&mut stream, &parcel);
 
-                            sender_ref.send(Pledge::ResourceRelease(resource_release)).unwrap();
                         } else {
                             warn!("Neighbour attempted to release resource without lock");
                             let parcel = ProtoParcel::proto_error();

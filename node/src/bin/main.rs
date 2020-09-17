@@ -14,24 +14,24 @@ use std::net::SocketAddr;
 use std::str::FromStr;
 use piko::dsc::dsc;
 use piko::state::{Mode, State, Node};
-use std::collections::HashMap;
+use std::collections::{HashMap, BinaryHeap};
 use std::env;
 use std::env::current_dir;
 use std::path::{PathBuf};
 
 use piko::net::listener_thread;
-use std::sync::{Arc, mpsc, RwLock};
+use std::sync::{Arc, mpsc, RwLock, Mutex};
 use std::sync::mpsc::{Sender, Receiver};
-use piko::wrk::{wrk, Pledge};
 
 use piko::internal::ThreadSignal;
-use piko::proto::{set_sender_id};
+use piko::proto::{set_sender_id, Pledge, ResourceRequest};
 
 use fern::colors::{Color, ColoredLevelConfig};
 use log::{info};
 
 use piko::heartbeat::heartbeat;
 use piko::client::client_listener;
+use piko::wrk::wrk;
 
 fn main() {
     setup_logger();
@@ -115,19 +115,24 @@ fn main() {
     set_sender_id(self_node_information.id);
 
 
-    // Initiate state
-    let state_inner = State::new(self_node_information, neighbours);
-    let state = Arc::new(RwLock::new(state_inner));
+    // Initiate state & shared data structures
+    let state = Arc::new(RwLock::new(State::new(self_node_information, neighbours)));
+    let pledge_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>> = Arc::new(Mutex::new(BinaryHeap::new()));
+    let f_lock: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
 
     // Start network listener thread
     let state_ref = state.clone();
-    let (pledge_sender, work_receiver): (Sender<Pledge>, Receiver<Pledge>) = mpsc::channel();
-    let tx = pledge_sender.clone();
-    rayon::spawn(move || listener_thread(state_ref, cluster_socket, tx));
+    let pledge_queue_ref = pledge_queue.clone();
+    let f_lock_ref = f_lock.clone();
+    rayon::spawn(move || listener_thread(cluster_socket, state_ref, pledge_queue_ref,f_lock_ref));
+
     // Start client listener thread
-    let tx = pledge_sender.clone();
-    rayon::spawn(move || client_listener(client_socket, tx));
-    // start heartbeat thread
+    let state_ref = state.clone();
+    let pledge_queue_ref = pledge_queue.clone();
+    let f_lock_ref = f_lock.clone();
+    rayon::spawn(move || client_listener(client_socket, state_ref,pledge_queue_ref, f_lock_ref));
+
+    // Start heartbeat thread
     let state_ref = state.clone();
     let (_monitor_sender, monitor_receiver): (Sender<ThreadSignal>, Receiver<ThreadSignal>) = mpsc::channel();
     rayon::spawn(move || heartbeat(state_ref, 5, 5, monitor_receiver));
@@ -145,7 +150,7 @@ fn main() {
             }
             Mode::Wrk => {
                 drop(state_lock);
-                wrk(state.clone(), &work_receiver);
+                wrk(state.clone());
             }
             Mode::Err => {}
             Mode::Panic => {}

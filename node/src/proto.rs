@@ -12,6 +12,8 @@ use rand::{random};
 use std::sync::Mutex;
 use lazy_static::lazy_static;
 use chrono::{DateTime, Utc};
+use std::cmp::Ordering;
+use enum_dispatch::enum_dispatch;
 
 
 static _PROTO_VERSION: &str = "1.0";
@@ -45,8 +47,9 @@ pub enum Type {
     ResourceRelease = 9,
 
     Ack = 10,
+    Publish = 11,
 
-    AddNode = 11,
+    AddNode = 12,
 }
 
 impl Display for Type {
@@ -63,7 +66,9 @@ impl Display for Type {
             Type::Ack => write!(f, "{}", "Ack"),
             Type::AddNode => write!(f, "{}", "AddNode"),
             Type::ResourceRelease => write!(f, "{}", "ResourceRelease"),
-            Type::ResourceRequest => write!(f, "{}", "ResourceRequest")
+            Type::ResourceRequest => write!(f, "{}", "ResourceRequest"),
+
+            Type::Publish => write!(f, "{}", "Publish"),
         }
     }
 }
@@ -100,6 +105,10 @@ pub enum Body {
         mode: Mode
     },
 
+    Publish {
+        message: Vec<u8>,
+    },
+
     ResourceRequest {
         timestamp: DateTime<Utc>,
         message_hash: [u8; 32],
@@ -123,6 +132,41 @@ pub struct MessageWrapper {
     pub message: Vec<u8>,
     pub sequence: u16,
     pub receiver_mask: u32,
+}
+
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub struct ResourceRequest {
+    pub owner: u16,
+    pub message_hash: [u8; 32],
+    pub timestamp: DateTime<Utc>,
+    pub sequence: u16,
+}
+
+impl Ord for ResourceRequest {
+    fn cmp(&self, other: &Self) -> Ordering {
+        other.timestamp.cmp(&self.timestamp)
+    }
+}
+
+impl PartialOrd for ResourceRequest {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+pub struct ResourceRelease {
+    pub owner: u16,
+    pub message_hash: [u8; 32],
+    pub timestamp: DateTime<Utc>,
+    pub message: MessageWrapper,
+    pub local: bool,
+    pub sequence: u16,
+}
+
+#[enum_dispatch]
+pub enum Pledge {
+    ResourceRequest(ResourceRequest),
+    ResourceRelease(ResourceRelease),
 }
 
 
@@ -230,16 +274,16 @@ impl ProtoParcel {
             body: Body::Ack { message_id },
         }
     }
-    pub fn resource_request(message_hash: [u8; 32], timestamp: DateTime<Utc>, sequence: u16) -> ProtoParcel {
+    pub fn resource_request(request: ResourceRequest) -> ProtoParcel {
         ProtoParcel {
             id: generate_id(),
             sender_id: *SENDER.lock().unwrap(),
             is_response: false,
             parcel_type: Type::ResourceRequest,
             body: Body::ResourceRequest {
-                timestamp,
-                message_hash,
-                sequence,
+                timestamp: request.timestamp,
+                message_hash: request.message_hash,
+                sequence: request.sequence,
             },
         }
     }

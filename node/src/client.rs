@@ -1,19 +1,22 @@
-use std::sync::{RwLock, Arc};
+use std::sync::{RwLock, Arc, Mutex};
 
-use std::collections::{VecDeque, HashMap};
+use std::collections::{VecDeque, HashMap, BinaryHeap};
 
 use std::net::{TcpListener, TcpStream};
 use serde::{Serialize, Deserialize};
 use byteorder::ReadBytesExt;
 use std::io::{Read, Write};
 
-
 use std::sync::mpsc::{Sender};
 
-use crate::wrk::{Pledge, ResourceRequest};
 use sha2::{Sha256, Digest};
 
 use chrono::{Utc};
+use crate::proto::{ResourceRequest, ResourceRelease, MessageWrapper};
+use crate::req::publish::publish;
+use crate::state::State;
+
+use log::{info};
 
 struct Client<'a> {
     identity: u64,
@@ -71,14 +74,16 @@ fn write_bytes(stream: &mut TcpStream, buf: &[u8]) {
     stream.write_all(buf).unwrap();
 }
 
-pub fn client_listener(listener: TcpListener, sender: Sender<Pledge>) {
+pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>,  pledge_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>>, f_access: Arc<Mutex<bool>>) {
     let client_list: Arc<RwLock<HashMap<u64, RwLock<Client>>>> = Arc::new(RwLock::new(HashMap::<u64, RwLock<Client>>::new()));
 
     for stream in listener.incoming() {
         let mut stream = stream.unwrap();
 
         let client_list = client_list.clone();
-        let sender = sender.clone();
+        let state_ref = state.clone();
+        let pledge_queue = Arc::clone(&pledge_queue);
+
         rayon::spawn(move || {
             let req = read_req(&mut stream);
 
@@ -116,16 +121,38 @@ pub fn client_listener(listener: TcpListener, sender: Sender<Pledge>) {
                 }
                 ReqType::LongPoll => {}
                 ReqType::Publish => {
-                    if let ReqBody::Publish { client_id: _, message } = req.req_body {
-                        let hash: [u8; 32] = Sha256::digest(message.as_slice()).into();
-                        let pledge: ResourceRequest = ResourceRequest {
+                    if let ReqBody::Publish { client_id, message } = req.req_body {
+                        info!("Publishing message from client {} with size {}", client_id, message.len());
+
+                        let state_ref = state_ref.write().unwrap();
+
+                        let message_hash: [u8; 32] = Sha256::digest(message.as_slice()).into();
+                        let timestamp = Utc::now();
+
+                        let req: ResourceRequest = ResourceRequest {
                             owner: *crate::proto::SENDER.lock().unwrap(),
-                            message_hash: hash,
-                            timestamp: Utc::now(),
-                            sequence: 0
+                            message_hash,
+                            timestamp,
+                            sequence: 0,
                         };
 
-                        sender.send(Pledge::ResourceRequest(pledge));
+                        let mut pledge_queue = pledge_queue.lock().unwrap();
+                        pledge_queue.push(req);
+                        drop(pledge_queue);
+
+                        publish(&state_ref.get_neighbour_addrs(), req);
+                        let release: ResourceRelease = ResourceRelease {
+                            owner: *crate::proto::SENDER.lock().unwrap(),
+                            message_hash,
+                            timestamp,
+                            message: MessageWrapper {
+                                message,
+                                sequence: 0,
+                                receiver_mask: 0,
+                            },
+                            local: false,
+                            sequence: 0,
+                        };
                     }
                 }
             }
