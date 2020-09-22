@@ -4,10 +4,9 @@ use std::collections::{VecDeque, HashMap, BinaryHeap};
 
 use std::net::{TcpListener, TcpStream};
 use serde::{Serialize, Deserialize};
-use byteorder::ReadBytesExt;
+use byteorder::{ReadBytesExt, WriteBytesExt};
 use std::io::{Read, Write};
-
-
+use std::error::Error;
 
 use sha2::{Sha256, Digest};
 
@@ -16,11 +15,22 @@ use crate::proto::{ResourceRequest, ResourceRelease, MessageWrapper};
 use crate::req::publish::publish;
 use crate::state::State;
 
-use log::{info};
+use log::{info, error};
 
 struct Client<'a> {
     identity: u64,
     message_queue: VecDeque<&'a Vec<u8>>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub enum ClientRes {
+    Success {
+        message: String,
+        bytes: Vec<u8>
+    },
+    Error {
+        message: String
+    },
 }
 
 #[derive(Serialize, Deserialize)]
@@ -58,23 +68,44 @@ pub struct ClientReq {
     req_body: ReqBody,
 }
 
-fn read_req(stream: &mut TcpStream) -> ClientReq {
-    let count = stream.read_u8().unwrap();
+impl ClientReq {
+    pub fn sub(client_id: u64) -> ClientReq {
+        ClientReq {
+            req_type: ReqType::Subscribe,
+            req_body: ReqBody::Subscribe { client_id },
+        }
+    }
+}
+
+///
+/// Read Request from client
+///
+fn read_req(stream: &mut TcpStream) -> Result<ClientReq, Box<dyn Error>> {
+    let count = stream.read_u8()?;
 
     // debug!("Expecting {} bytes", count);
 
     let mut buf = vec![0u8; count as usize];
-    stream.read_exact(&mut buf).unwrap();
 
-    let client_req: ClientReq = serde_cbor::from_slice(buf.as_slice()).unwrap();
-    client_req
+    stream.read_exact(&mut buf)?;
+
+    let client_req: ClientReq = serde_cbor::from_slice(buf.as_slice())?;
+
+    Ok(client_req)
 }
 
-fn write_bytes(stream: &mut TcpStream, buf: &[u8]) {
-    stream.write_all(buf).unwrap();
+///
+/// Write Response to client
+///
+fn write_res(stream: &mut TcpStream, res: ClientRes) {
+
+    let buf = serde_cbor::to_vec(&res).unwrap();
+
+    stream.write_u8(buf.len() as u8);
+    stream.write_all(buf.as_slice()).unwrap();
 }
 
-pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>,  pledge_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>>, _f_access: Arc<Mutex<bool>>) {
+pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, pledge_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>>, _f_access: Arc<Mutex<bool>>) {
     let client_list: Arc<RwLock<HashMap<u64, RwLock<Client>>>> = Arc::new(RwLock::new(HashMap::<u64, RwLock<Client>>::new()));
 
     for stream in listener.incoming() {
@@ -85,7 +116,12 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>,  pledge
         let pledge_queue = Arc::clone(&pledge_queue);
 
         rayon::spawn(move || {
-            let req = read_req(&mut stream);
+            let req = match read_req(&mut stream) {
+                Ok(req) => req,
+                Err(e) => {
+                    return;
+                }
+            };
 
             match req.req_type {
                 ReqType::Subscribe => {
@@ -111,10 +147,18 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>,  pledge
                         match message {
                             None => {
                                 // write empty buffer
-                                write_bytes(&mut stream, &[])
+                                let res= ClientRes::Success {
+                                    message: "".to_string(),
+                                    bytes: vec![]
+                                };
+                                write_res(&mut stream, res);
                             }
                             Some(message) => {
-                                write_bytes(&mut stream, message.as_slice())
+                                let res = ClientRes::Success {
+                                    message: "".to_string(),
+                                    bytes: message.to_vec()
+                                };
+                                write_res(&mut stream, res)
                             }
                         }
                     }

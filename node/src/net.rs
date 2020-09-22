@@ -16,11 +16,11 @@ use sha2::{Digest};
 
 
 pub fn read_parcel(stream: &mut TcpStream) -> ProtoParcel {
-    let count = stream.read_u8().unwrap();
+    let size = stream.read_u8().unwrap();
 
-    // debug!("Expecting {} bytes", count);
+    // debug!("Expecting {} bytes", size);
 
-    let mut buf = vec![0u8; count as usize];
+    let mut buf = vec![0u8; size as usize];
     stream.read_exact(&mut buf).unwrap();
 
     let proto_parcel: ProtoParcel = serde_cbor::from_slice(buf.as_slice()).unwrap();
