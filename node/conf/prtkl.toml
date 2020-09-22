@@ -1,11 +1,9 @@
 [node]
 name = "Ivan"
-host = "127.0.0.1"
-port = 7878
-client_host = "127.0.0.1"
-client_port = "8878"
-thread_count = 4
+socket = "0.0.0.0:7878"
+client_socket = "0.0.0.0:8878"
+thread_count = 8
 
 [cluster]
 name = "Bramchalka"
-neighbours = ["127.0.0.1:7879"]
+neighbours = ["0.0.0.0:7879"]

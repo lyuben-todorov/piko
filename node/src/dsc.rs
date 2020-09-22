@@ -54,7 +54,7 @@ pub fn dsc(state: Arc<RwLock<State>>, neighbour_list: &Vec<SocketAddr>) {
 // Writes result to state after acquiring write lock
 fn discover(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<Vec<Node>>) {
     info!("Connecting to {}", host);
-    let mut tcp_stream = match TcpStream::connect(host) {
+    let mut stream = match TcpStream::connect(host) {
         Ok(stream) => stream,
         Err(err) => {
             error!("{}: {}", err, host);
@@ -62,8 +62,15 @@ fn discover(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<Vec<Nod
         }
     };
 
-    write_parcel(&mut tcp_stream, req_parcel);
-    let res_parcel = read_parcel(&mut tcp_stream);
+    write_parcel(&mut stream, req_parcel);
+
+    let res_parcel = match read_parcel(&mut stream) {
+        Ok(parcel) => parcel,
+        Err(e) => {
+            error!("Invalid parcel! {}", e);
+            return;
+        }
+    };
 
     match res_parcel.parcel_type {
         Type::DscRes => {

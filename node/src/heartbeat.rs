@@ -12,7 +12,7 @@ use std::collections::{HashMap, HashSet};
 
 use log::{debug, error, info, trace, warn};
 
-pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, _timeout: u32, rx: Receiver<ThreadSignal>) {
+pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, timeout: u32, rx: Receiver<ThreadSignal>) {
     let mut scheduler = Scheduler::new();
     // map node id to amount of timeouts
     let mut timeouts: HashMap<u16, u8> = HashMap::new();
@@ -44,14 +44,20 @@ pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, _timeout: u32, rx: 
             // end parallel scope
 
             for result in receiver.iter() {
-                if !result.1 {
-                    let entry = timeouts.entry(result.0).or_insert(0);
+                let (id, node_response) = result;
+
+                if !node_response {
+                    let entry = timeouts.entry(id).or_insert(0);
                     *entry += 1;
-                    if *entry > 5 {
-                        warn!("Node with id {} timed out for {}", result.0, entry);
+                    warn!("Node with id {} timed out for {}", id, entry);
+                    if *entry > timeout as u8 {
+                        error!("Node with id {} timed out for more than {} heartbeats.", id, timeout);
+                        let mut state_ref = state.write().unwrap();
+                        let mut node = state_ref.neighbours.entry(id);
+                        node.and_modify(|x| { x.mode = Mode::TimedOut });
                     }
                 } else {
-                    timeouts.insert(result.0, 0);
+                    timeouts.insert(id, 0);
                 }
             }
         } else {
@@ -80,16 +86,23 @@ pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, _timeout: u32, rx: 
 fn ping(node: &Node, req_parcel: &ProtoParcel, tx: &mut Sender<(u16, bool)>) {
     info!("Sending Ping to {}", node.id);
 
-    let mut tcp_stream = match TcpStream::connect(node.host) {
+    let mut stream = match TcpStream::connect(node.host) {
         Ok(stream) => stream,
         Err(err) => {
-            error!("{}: {}", err, node.id);
+            // debug!("{}: {}", err, node.id);
             tx.send((node.id, false)).unwrap();
             return;
         }
     };
-    write_parcel(&mut tcp_stream, &req_parcel);
-    let res_parcel = read_parcel(&mut tcp_stream);
+    write_parcel(&mut stream, &req_parcel);
+    let res_parcel = match read_parcel(&mut stream) {
+        Ok(parcel) => parcel,
+        Err(e) => {
+            error!("Invalid parcel! {}", e);
+            tx.send((node.id, false)).unwrap();
+            return;
+        }
+    };
     match res_parcel.parcel_type {
         Type::Pong => {
             tx.send((node.id, true)).unwrap();

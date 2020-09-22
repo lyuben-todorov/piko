@@ -30,15 +30,21 @@ pub fn seq_recovery(neighbour_list: &Vec<SocketAddr>) -> u8 {
 fn recover(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<u8>) {
     info!("Recovering sequence from {}", host);
 
-    let mut tcp_stream = match TcpStream::connect(host) {
+    let mut stream = match TcpStream::connect(host) {
         Ok(stream) => stream,
         Err(err) => {
             error!("{}: {}", err, host);
             return;
         }
     };
-    write_parcel(&mut tcp_stream, &req_parcel);
-    let res_parcel = read_parcel(&mut tcp_stream);
+    write_parcel(&mut stream, &req_parcel);
+    let res_parcel = match read_parcel(&mut stream) {
+        Ok(parcel) => parcel,
+        Err(e) => {
+            error!("Invalid parcel! {}", e);
+            return;
+        }
+    };
     match res_parcel.parcel_type {
         Type::SeqRes => {
             if let Body::SeqRes { seq_number } = res_parcel.body {

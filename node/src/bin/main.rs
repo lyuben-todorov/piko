@@ -9,7 +9,7 @@ extern crate fern;
 
 use config::*;
 
-use std::net::{TcpListener, Ipv4Addr, SocketAddrV4};
+use std::net::{TcpListener, Ipv4Addr, SocketAddrV4, ToSocketAddrs};
 use std::net::SocketAddr;
 use std::str::FromStr;
 use piko::dsc::dsc;
@@ -58,40 +58,33 @@ fn main() {
     let name = settings
         .get_str("node.name")
         .expect("Missing node name.");
-    let host_name = settings
-        .get_str("node.host")
-        .expect("Missing node hostname");
-    let port = settings
-        .get_int("node.port")
-        .expect("Missing node port.");
-    let client_host_name = settings
-        .get_str("node.client_host")
-        .expect("Missing node client hostname");
-    let client_port = settings
-        .get_int("node.client_port")
-        .expect("Missing node port.");
+    let socket_name = settings
+        .get_str("node.socket")
+        .expect("Missing main socket name");
+    let client_socket_name = settings
+        .get_str("node.client_socket")
+        .expect("Missing client socket name");
     let thread_count = settings
         .get_int("node.thread_count")
         .expect("Missing node thread_count.");
-
     let neighbour_host_names = settings
         .get_array("cluster.neighbours")
         .expect("Missing cluster settings.");
     let mut neighbour_socket_addresses: Vec<SocketAddr> = Vec::new();
 
     for result in neighbour_host_names {
-        let neighbour_host_name = result.into_str().expect("Error parsing cluster node entry.");
-        let socket = SocketAddr::from_str(&neighbour_host_name).unwrap();
-        neighbour_socket_addresses.push(socket);
+        let addr = result.into_str().expect("Error parsing cluster node entry.");
+        let addr = addr.to_socket_addrs().expect("Error parsing host name").next().unwrap();
+        neighbour_socket_addresses.push(addr);
     }
+
+    let addr = socket_name.to_socket_addrs().expect("Error parsing host name").next().unwrap();
+    let client_addr = client_socket_name.to_socket_addrs().expect("Error parsing client host name").next().unwrap();
 
     rayon::ThreadPoolBuilder::new().num_threads(thread_count as usize).build_global().unwrap();
     info!("Setting worker pool count to {}.", thread_count);
 
-    let addr = Ipv4Addr::from_str(&host_name).expect("Error parsing host name");
-    let address = SocketAddr::from(SocketAddrV4::new(addr, port as u16));
-
-    let cluster_socket = match TcpListener::bind(address) {
+    let cluster_socket = match TcpListener::bind(addr) {
         Ok(listener) => {
             info!("Listening to cluster on {}.", listener.local_addr().unwrap());
             listener
@@ -99,10 +92,7 @@ fn main() {
         Err(error) => panic!("Error binding cluster socket: {}", error),
     };
 
-    let client_addr = Ipv4Addr::from_str(&client_host_name).expect("Error parsing host name");
-    let client_address = SocketAddr::from(SocketAddrV4::new(client_addr, client_port as u16));
-
-    let client_socket = match TcpListener::bind(client_address) {
+    let client_socket = match TcpListener::bind(client_addr) {
         Ok(listener) => {
             info!("Listening to clients on {}.", listener.local_addr().unwrap());
             listener
@@ -111,7 +101,7 @@ fn main() {
     };
 
     let neighbours = HashMap::<u16, Node>::new();
-    let self_node_information = Node::new(name, Mode::Dsc, address);
+    let self_node_information = Node::new(name, Mode::Dsc, addr);
     set_sender_id(self_node_information.id);
 
 
@@ -124,13 +114,13 @@ fn main() {
     let state_ref = state.clone();
     let pledge_queue_ref = pledge_queue.clone();
     let f_lock_ref = f_lock.clone();
-    rayon::spawn(move || listener_thread(cluster_socket, state_ref, pledge_queue_ref,f_lock_ref));
+    rayon::spawn(move || listener_thread(cluster_socket, state_ref, pledge_queue_ref, f_lock_ref));
 
     // Start client listener thread
     let state_ref = state.clone();
     let pledge_queue_ref = pledge_queue.clone();
     let f_lock_ref = f_lock.clone();
-    rayon::spawn(move || client_listener(client_socket, state_ref,pledge_queue_ref, f_lock_ref));
+    rayon::spawn(move || client_listener(client_socket, state_ref, pledge_queue_ref, f_lock_ref));
 
     // Start heartbeat thread
     let state_ref = state.clone();

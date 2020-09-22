@@ -21,7 +21,7 @@ pub fn publish(neighbour_list: &Vec<SocketAddr>, req: ResourceRequest) {
 
 fn publish_request(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<ThreadSignal>) {
     info!("Pushing request to {}", host);
-    let mut tcp_stream = match TcpStream::connect(host) {
+    let mut stream = match TcpStream::connect(host) {
         Ok(stream) => stream,
         Err(err) => {
             error!("{}: {}", err, host);
@@ -29,10 +29,15 @@ fn publish_request(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<
         }
     };
     let m_id = req_parcel.id;
-    write_parcel(&mut tcp_stream, &req_parcel);
+    write_parcel(&mut stream, &req_parcel);
 
-    let res_parcel = read_parcel(&mut tcp_stream);
-
+    let res_parcel = match read_parcel(&mut stream) {
+        Ok(parcel) => parcel,
+        Err(e) => {
+            error!("Invalid parcel! {}", e);
+            return;
+        }
+    };
     let result = is_acked(res_parcel, m_id);
     tx.send(result).unwrap();
 }

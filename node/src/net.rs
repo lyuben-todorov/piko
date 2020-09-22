@@ -13,18 +13,19 @@ use crate::req::add_node::add_node;
 use log::{debug, error, info, trace, warn};
 use std::collections::{BinaryHeap, HashMap};
 use sha2::{Digest};
+use std::error::Error;
 
 
-pub fn read_parcel(stream: &mut TcpStream) -> ProtoParcel {
-    let size = stream.read_u8().unwrap();
+pub fn read_parcel(stream: &mut TcpStream) -> Result<ProtoParcel, Box<dyn Error>> {
+    let size = stream.read_u8()?;
 
     // debug!("Expecting {} bytes", size);
 
     let mut buf = vec![0u8; size as usize];
-    stream.read_exact(&mut buf).unwrap();
+    stream.read_exact(&mut buf)?;
 
     let proto_parcel: ProtoParcel = serde_cbor::from_slice(buf.as_slice()).unwrap();
-    proto_parcel
+    Ok(proto_parcel)
 }
 
 pub fn write_parcel(stream: &mut TcpStream, parcel: &ProtoParcel) {
@@ -74,7 +75,13 @@ pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, pledge_qu
         let f_access = Arc::clone(&f_access);
         let pledge_queue = Arc::clone(&pledge_queue);
         rayon::spawn(move || {
-            let parcel = read_parcel(&mut stream);
+            let parcel = match read_parcel(&mut stream) {
+                Ok(parcel) => parcel,
+                Err(e) => {
+                    error!("Invalid parcel! {}", e);
+                    return
+                }
+            };
 
             match parcel.parcel_type {
                 Type::DscReq => {
@@ -196,7 +203,6 @@ pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, pledge_qu
 
                             let parcel = ProtoParcel::ack(parcel.id);
                             write_parcel(&mut stream, &parcel);
-
                         } else {
                             warn!("Neighbour attempted to release resource without lock");
                             let parcel = ProtoParcel::proto_error();
