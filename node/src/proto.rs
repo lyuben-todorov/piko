@@ -90,6 +90,7 @@ pub enum Body {
     },
 
     DscRes {
+        self_id: Node,
         neighbours: Vec<Node>,
     },
 
@@ -195,13 +196,13 @@ impl ProtoParcel {
         }
     }
 
-    pub fn dsc_res(neighbours_information: Vec<Node>) -> ProtoParcel {
+    pub fn dsc_res(neighbours_information: Vec<Node>, self_id:Node) -> ProtoParcel {
         ProtoParcel {
             id: generate_id(),
             sender_id: *SENDER.lock().unwrap(),
             is_response: true,
             parcel_type: Type::DscRes,
-            body: Body::DscRes { neighbours: neighbours_information },
+            body: Body::DscRes { neighbours: neighbours_information, self_id },
         }
     }
 

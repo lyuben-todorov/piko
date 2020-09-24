@@ -79,7 +79,7 @@ pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, pledge_qu
                 Ok(parcel) => parcel,
                 Err(e) => {
                     error!("Invalid parcel! {}", e);
-                    return
+                    return;
                 }
             };
 
@@ -105,9 +105,7 @@ pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, pledge_qu
                         drop(state_ref); // drop write lock before tcp writes
 
                         neighbours.extend_from_slice(state_neighbours.as_slice());
-                        neighbours.push(self_node);
-
-                        let parcel = ProtoParcel::dsc_res(neighbours);
+                        let parcel = ProtoParcel::dsc_res(neighbours, self_node);
 
                         write_parcel(&mut stream, &parcel);
                     } else {

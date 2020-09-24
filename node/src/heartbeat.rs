@@ -51,7 +51,7 @@ pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, timeout: u32, rx: R
                     *entry += 1;
                     warn!("Node with id {} timed out for {}", id, entry);
                     if *entry > timeout as u8 {
-                        error!("Node with id {} timed out for more than {} heartbeats.", id, timeout);
+                        error!("Node with id {} timed out for more than {} heartbeats. ", id, timeout);
                         let mut state_ref = state.write().unwrap();
                         let mut node = state_ref.neighbours.entry(id);
                         node.and_modify(|x| { x.mode = Mode::TimedOut });
