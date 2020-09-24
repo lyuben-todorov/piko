@@ -89,7 +89,7 @@ fn ping(node: &Node, req_parcel: &ProtoParcel, tx: &mut Sender<(u16, bool)>) {
     let mut stream = match TcpStream::connect(node.host) {
         Ok(stream) => stream,
         Err(err) => {
-            // debug!("{}: {}", err, node.id);
+            debug!("{}: {}", err, node.id);
             tx.send((node.id, false)).unwrap();
             return;
         }

@@ -21,7 +21,7 @@ pub fn dsc(state: Arc<RwLock<State>>, neighbour_list: &Vec<SocketAddr>) {
 
     info!("Attempting to connect to {} hosts", neighbour_list.len());
 
-    let (sender, receiver): (Sender<(Vec<Node>, Node)>, Receiver<(Vec<Node>, Node)>) = mpsc::channel(); // make channel for responses
+    let (sender, receiver): (Sender<Vec<Node>>, Receiver<Vec<Node>>) = mpsc::channel(); // make channel for responses
 
     let state_ref = state.read().unwrap();
     let node = state_ref.self_node_information.clone();
@@ -40,7 +40,7 @@ pub fn dsc(state: Arc<RwLock<State>>, neighbour_list: &Vec<SocketAddr>) {
 
     // collect results
     for nodes in receiver.iter() {
-        neighbours.extend(nodes.0);
+        neighbours.extend(nodes);
     }
     let mut state = state.write().unwrap(); // acquire write lock
     for neighbour in neighbours {
@@ -52,7 +52,7 @@ pub fn dsc(state: Arc<RwLock<State>>, neighbour_list: &Vec<SocketAddr>) {
 
 // Request/response on same tcp stream
 // Writes result to state after acquiring write lock
-fn discover(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<(Vec<Node>, Node)>) {
+fn discover(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<Vec<Node>>) {
     info!("Connecting to {}", host);
     let mut stream = match TcpStream::connect(host) {
         Ok(stream) => stream,
@@ -74,11 +74,11 @@ fn discover(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<(Vec<No
 
     match res_parcel.parcel_type {
         Type::DscRes => {
-            if let Body::DscRes { neighbours, mut self_id } = res_parcel.body {
+            if let Body::DscRes { mut neighbours, mut self_id } = res_parcel.body {
 
                 self_id.host = *host; // change hostname to the one the node was contacted on
-
-                tx.send((neighbours, self_id)).unwrap();
+                neighbours.push(self_id);
+                tx.send(neighbours).unwrap();
             } else {
                 error!("Body-header type mismatch!");
                 return;
