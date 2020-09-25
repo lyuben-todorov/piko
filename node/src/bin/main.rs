@@ -64,6 +64,8 @@ fn main() {
     let client_socket_name = settings
         .get_str("node.client_socket")
         .expect("Missing client socket name");
+    let external_addr = settings
+        .get_str("node.external_addr");
     let thread_count = settings
         .get_int("node.thread_count")
         .expect("Missing node thread_count.");
@@ -80,6 +82,10 @@ fn main() {
 
     let addr = socket_name.to_socket_addrs().expect("Error parsing host name").next().unwrap();
     let client_addr = client_socket_name.to_socket_addrs().expect("Error parsing client host name").next().unwrap();
+    let external_addr = match external_addr {
+        Ok(addr) => { Some(SocketAddr::from_str(addr.as_str()).unwrap()) }
+        Err(e) => { None }
+    };
 
     rayon::ThreadPoolBuilder::new().num_threads(thread_count as usize).build_global().unwrap();
     info!("Setting worker pool count to {}.", thread_count);
@@ -104,7 +110,7 @@ fn main() {
 
 
     // Initiate state & shared data structures
-    let state = Arc::new(RwLock::new(State::new(Mode::Dsc, name, addr, None, neighbours)));
+    let state = Arc::new(RwLock::new(State::new(Mode::Dsc, name, addr, external_addr, neighbours)));
 
     set_sender_id(state.read().unwrap().id);
 

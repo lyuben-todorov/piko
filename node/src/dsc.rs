@@ -22,6 +22,7 @@ pub fn dsc(state: Arc<RwLock<State>>, neighbour_list: &Vec<SocketAddr>) {
     info!("Attempting to connect to {} hosts", neighbour_list.len());
 
     let (sender, receiver): (Sender<Vec<Node>>, Receiver<Vec<Node>>) = mpsc::channel(); // make channel for responses
+
     let state_ref = state.read().unwrap();
     let node = state_ref.get_node_information();
     drop(state_ref);
