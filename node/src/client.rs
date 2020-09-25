@@ -187,7 +187,7 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, pledge_
                         }
                     }
                 }
-                ClientReq::LongPoll { client_id } => {}
+                ClientReq::LongPoll { client_id: _ } => {}
                 ClientReq::Publish { client_id, message } => {
                     info!("Publishing message from client {} with size {}", client_id, message.len());
 

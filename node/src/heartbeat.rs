@@ -10,7 +10,7 @@ use std::time::Duration;
 use crate::internal::ThreadSignal;
 use std::collections::{HashMap, HashSet};
 
-use log::{debug, error, info, trace, warn};
+use log::{debug, error, info, warn};
 
 pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, timeout: u32, rx: Receiver<ThreadSignal>) {
     let mut scheduler = Scheduler::new();
@@ -53,7 +53,7 @@ pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, timeout: u32, rx: R
                     if *entry > timeout as u8 {
                         error!("Node with id {} timed out for more than {} heartbeats. ", id, timeout);
                         let mut state_ref = state.write().unwrap();
-                        let mut node = state_ref.neighbours.entry(id);
+                        let node = state_ref.neighbours.entry(id);
                         node.and_modify(|x| { x.mode = Mode::TimedOut });
                     }
                 } else {

@@ -9,7 +9,7 @@ extern crate fern;
 
 use config::*;
 
-use std::net::{TcpListener, Ipv4Addr, SocketAddrV4, ToSocketAddrs};
+use std::net::{TcpListener, ToSocketAddrs};
 use std::net::SocketAddr;
 use std::str::FromStr;
 use piko::dsc::dsc;
@@ -84,7 +84,7 @@ fn main() {
     let client_addr = client_socket_name.to_socket_addrs().expect("Error parsing client host name").next().unwrap();
     let external_addr = match external_addr {
         Ok(addr) => { Some(SocketAddr::from_str(addr.as_str()).unwrap()) }
-        Err(e) => { None }
+        Err(_e) => { None }
     };
 
     rayon::ThreadPoolBuilder::new().num_threads(thread_count as usize).build_global().unwrap();
