@@ -14,11 +14,12 @@ use lazy_static::lazy_static;
 use chrono::{DateTime, Utc};
 use std::cmp::Ordering;
 use enum_dispatch::enum_dispatch;
+use std::net::SocketAddr;
 
 
-static _PROTO_VERSION: &str = "1.0";
 
 lazy_static! {
+    pub static ref PROTO_VERSION: String = "1.0".to_string();
     pub static ref SENDER: Mutex<u16> = Mutex::new(0);
 }
 
@@ -50,6 +51,9 @@ pub enum Type {
     Publish = 11,
 
     AddNode = 12,
+
+    ExtAddrReq = 13,
+    ExtAddrRes = 14,
 }
 
 impl Display for Type {
@@ -67,6 +71,9 @@ impl Display for Type {
             Type::AddNode => write!(f, "{}", "AddNode"),
             Type::ResourceRelease => write!(f, "{}", "ResourceRelease"),
             Type::ResourceRequest => write!(f, "{}", "ResourceRequest"),
+
+            Type::ExtAddrRes => write!(f, "{}", "ExtAddrRes"),
+            Type::ExtAddrReq => write!(f, "{}", "ExtAddrReq"),
 
             Type::Publish => write!(f, "{}", "Publish"),
         }
@@ -123,6 +130,10 @@ pub enum Body {
         message: Vec<u8>,
     },
 
+    ExtAddrRes {
+        addr: SocketAddr
+    },
+
     Ack {
         message_id: u64
     },
@@ -175,6 +186,7 @@ pub enum Pledge {
 pub struct ProtoParcel {
     // id of message
     pub id: u64,
+    pub proto_version: String,
     // id of sender
     pub sender_id: u16,
     // whether or not packet is a response
@@ -189,6 +201,7 @@ impl ProtoParcel {
     pub fn dsc_req(self_node_information: Node) -> ProtoParcel {
         ProtoParcel {
             id: generate_id(),
+            proto_version: PROTO_VERSION.clone(),
             sender_id: *SENDER.lock().unwrap(),
             is_response: false,
             parcel_type: Type::DscReq,
@@ -196,9 +209,10 @@ impl ProtoParcel {
         }
     }
 
-    pub fn dsc_res(neighbours_information: Vec<Node>, self_id:Node) -> ProtoParcel {
+    pub fn dsc_res(neighbours_information: Vec<Node>, self_id: Node) -> ProtoParcel {
         ProtoParcel {
             id: generate_id(),
+            proto_version: PROTO_VERSION.clone(),
             sender_id: *SENDER.lock().unwrap(),
             is_response: true,
             parcel_type: Type::DscRes,
@@ -209,6 +223,7 @@ impl ProtoParcel {
     pub fn seq_req() -> ProtoParcel {
         ProtoParcel {
             id: generate_id(),
+            proto_version: PROTO_VERSION.clone(),
             sender_id: *SENDER.lock().unwrap(),
             is_response: false,
             parcel_type: Type::SeqReq,
@@ -219,6 +234,7 @@ impl ProtoParcel {
     pub fn seq_res(seq_number: u8) -> ProtoParcel {
         ProtoParcel {
             id: generate_id(),
+            proto_version: PROTO_VERSION.clone(),
             sender_id: *SENDER.lock().unwrap(),
             is_response: true,
             parcel_type: Type::SeqRes,
@@ -229,6 +245,7 @@ impl ProtoParcel {
     pub fn add_node(nodes: Vec<Node>) -> ProtoParcel {
         ProtoParcel {
             id: generate_id(),
+            proto_version: PROTO_VERSION.clone(),
             sender_id: *SENDER.lock().unwrap(),
             is_response: true,
             parcel_type: Type::AddNode,
@@ -239,6 +256,7 @@ impl ProtoParcel {
     pub fn state_change(mode: Mode) -> ProtoParcel {
         ProtoParcel {
             id: generate_id(),
+            proto_version: PROTO_VERSION.clone(),
             sender_id: *SENDER.lock().unwrap(),
             is_response: false,
             parcel_type: Type::StateChange,
@@ -249,6 +267,7 @@ impl ProtoParcel {
     pub fn ping() -> ProtoParcel {
         ProtoParcel {
             id: generate_id(),
+            proto_version: PROTO_VERSION.clone(),
             sender_id: *SENDER.lock().unwrap(),
             is_response: false,
             parcel_type: Type::Ping,
@@ -259,6 +278,7 @@ impl ProtoParcel {
     pub fn pong() -> ProtoParcel {
         ProtoParcel {
             id: generate_id(),
+            proto_version: PROTO_VERSION.clone(),
             sender_id: *SENDER.lock().unwrap(),
             is_response: true,
             parcel_type: Type::Pong,
@@ -269,6 +289,7 @@ impl ProtoParcel {
     pub fn ack(message_id: u64) -> ProtoParcel {
         ProtoParcel {
             id: generate_id(),
+            proto_version: PROTO_VERSION.clone(),
             sender_id: *SENDER.lock().unwrap(),
             is_response: true,
             parcel_type: Type::Ack,
@@ -278,6 +299,7 @@ impl ProtoParcel {
     pub fn resource_request(request: ResourceRequest) -> ProtoParcel {
         ProtoParcel {
             id: generate_id(),
+            proto_version: PROTO_VERSION.clone(),
             sender_id: *SENDER.lock().unwrap(),
             is_response: false,
             parcel_type: Type::ResourceRequest,
@@ -291,6 +313,7 @@ impl ProtoParcel {
     pub fn resource_release(message_hash: [u8; 32], timestamp: DateTime<Utc>, sequence: u16, message: Vec<u8>) -> ProtoParcel {
         ProtoParcel {
             id: generate_id(),
+            proto_version: PROTO_VERSION.clone(),
             sender_id: *SENDER.lock().unwrap(),
             is_response: false,
             parcel_type: Type::ResourceRelease,
@@ -302,8 +325,30 @@ impl ProtoParcel {
             },
         }
     }
+
+    pub fn ext_addr_req() -> ProtoParcel {
+        ProtoParcel {
+            id: generate_id(),
+            proto_version: PROTO_VERSION.clone(),
+            sender_id: *SENDER.lock().unwrap(),
+            is_response: false,
+            parcel_type: Type::ResourceRelease,
+            body: Body::Empty,
+        }
+    }
+    pub fn ext_addr_res(addr: SocketAddr) -> ProtoParcel {
+        ProtoParcel {
+            id: generate_id(),
+            proto_version: PROTO_VERSION.clone(),
+            sender_id: *SENDER.lock().unwrap(),
+            is_response: false,
+            parcel_type: Type::ResourceRelease,
+            body: Body::ExtAddrRes { addr },
+        }
+    }
     pub fn proto_error() -> ProtoParcel {
         ProtoParcel {
+            proto_version: PROTO_VERSION.clone(),
             id: generate_id(),
             sender_id: *SENDER.lock().unwrap(),
             is_response: true,

@@ -43,7 +43,10 @@ A worker keeps track of its neighbours by sending a heartbeat to each of its wor
 If a node goes silent for more a number of repeated unacknowledged pings, it is removed from the cluster.
 
 ### State change
-A node can send a `StateChange` parcel containing its new state so that its neighbours can locally update it.
+A node can send a `StateChange` containing its new state so that its neighbours can locally update it.
+
+### External address query
+A node can send a `ExtAddrReq` to a neighbour to figure out the external address it's being contacted on. 
 
 ### Protocol format 
 Protocol operates under TCP. A protocol 'packet' is referred to as parcel. The encoding we're using is CBOR. 
