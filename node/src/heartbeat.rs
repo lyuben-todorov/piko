@@ -29,7 +29,7 @@ pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, timeout: u32, rx: R
             }
         }
 
-        if state_ref.self_node_information.mode == Mode::Wrk {
+        if state_ref.mode == Mode::Wrk {
             let (sender, receiver): (Sender<(u16, bool)>, Receiver<(u16, bool)>) = mpsc::channel(); // setup channel for results
 
             let neighbour_list: Vec<Node> = state_ref.get_active_neighbours();
@@ -86,7 +86,7 @@ pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, timeout: u32, rx: R
 fn ping(node: &Node, req_parcel: &ProtoParcel, tx: &mut Sender<(u16, bool)>) {
     info!("Sending Ping to {}", node.id);
 
-    let mut stream = match TcpStream::connect(node.host) {
+    let mut stream = match TcpStream::connect(node.external_addr) {
         Ok(stream) => stream,
         Err(err) => {
             debug!("{}: {}", err, node.id);

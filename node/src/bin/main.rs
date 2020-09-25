@@ -101,12 +101,13 @@ fn main() {
     };
 
     let neighbours = HashMap::<u16, Node>::new();
-    let self_node_information = Node::new(name, Mode::Dsc, addr);
-    set_sender_id(self_node_information.id);
 
 
     // Initiate state & shared data structures
-    let state = Arc::new(RwLock::new(State::new(self_node_information, neighbours)));
+    let state = Arc::new(RwLock::new(State::new(Mode::Dsc, name, addr, None, neighbours)));
+
+    set_sender_id(state.read().unwrap().id);
+
     let pledge_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>> = Arc::new(Mutex::new(BinaryHeap::new()));
     let f_lock: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
 
@@ -131,7 +132,7 @@ fn main() {
     info!("Started main worker thread!");
     loop {
         let state_lock = state.read().unwrap();
-        let mode = &state_lock.self_node_information.mode;
+        let mode = &state_lock.mode;
         info!("Mode: {}", mode);
         match mode {
             Mode::Dsc => {

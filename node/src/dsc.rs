@@ -22,9 +22,8 @@ pub fn dsc(state: Arc<RwLock<State>>, neighbour_list: &Vec<SocketAddr>) {
     info!("Attempting to connect to {} hosts", neighbour_list.len());
 
     let (sender, receiver): (Sender<Vec<Node>>, Receiver<Vec<Node>>) = mpsc::channel(); // make channel for responses
-
     let state_ref = state.read().unwrap();
-    let node = state_ref.self_node_information.clone();
+    let node = state_ref.get_node_information();
     drop(state_ref);
     let req_parcel = ProtoParcel::dsc_req(node); // Use same object for serializing each request
 
@@ -76,7 +75,7 @@ fn discover(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<Vec<Nod
         Type::DscRes => {
             if let Body::DscRes { mut neighbours, mut self_id } = res_parcel.body {
 
-                self_id.host = *host; // change hostname to the one the node was contacted on
+                self_id.external_addr = *host; // change hostname to the one the node was contacted on
                 neighbours.push(self_id);
                 tx.send(neighbours).unwrap();
             } else {

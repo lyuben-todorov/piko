@@ -92,7 +92,8 @@ pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, pledge_qu
 
                         let mut state_ref = state_ref.write().unwrap(); // acquire write lock
                         let state_neighbours: Vec<Node> = state_ref.neighbours.values().cloned().collect();
-                        let self_node = state_ref.self_node_information.clone();
+
+                        let self_node = state_ref.get_node_information();
 
                         // Push found node to neighbours
                         let mut update: Vec<Node> = Vec::new();
@@ -207,6 +208,12 @@ pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, pledge_qu
                             write_parcel(&mut stream, &parcel);
                         }
                     }
+                }
+                Type::ExtAddrReq => {
+                    info!("Got ExtAddrReq with id {} from node {}", parcel.id, parcel.sender_id);
+                    let addr = stream.peer_addr().unwrap();
+                    let res = ProtoParcel::ext_addr_res(addr);
+                    write_parcel(&mut stream, &res);
                 }
                 _ => {
                     error!("Unexpected message type!, {}", parcel.parcel_type);

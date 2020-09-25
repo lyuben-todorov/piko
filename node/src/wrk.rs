@@ -20,7 +20,7 @@ use log::{debug, error, info, trace, warn};
 pub fn wrk(state: Arc<RwLock<State>>) {
     let mut state_ref = state.write().unwrap();
 
-    let _local_id = state_ref.self_node_information.id;
+    let _local_id = state_ref.id;
 
     if state_ref.get_cluster_size() == 0 {}
     info!("Acquiring sequence number");

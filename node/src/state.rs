@@ -37,15 +37,37 @@ impl Display for Mode {
 }
 
 pub struct State {
-    pub self_node_information: Node,
+    pub id: u16,
+    pub mode: Mode,
+    pub name: String,
+    pub internal_addr: SocketAddr,
+    pub external_addr: Option<SocketAddr>,
+
     pub neighbours: HashMap<u16, Node>,
     pub sequence: u8,
     pub current_lock: [u8; 32],
 }
 
 impl State {
-    pub fn new(self_node_information: Node, neighbours: HashMap<u16, Node>) -> Self {
-        State { self_node_information, neighbours, sequence: 0, current_lock: [0; 32] }
+    pub fn new(mode: Mode, name: String,
+               internal_addr: SocketAddr, external_addr: Option<SocketAddr>,
+               neighbours: HashMap<u16, Node>) -> Self {
+
+        let id = Sha256::digest(name.as_bytes()).as_slice().read_u16::<BigEndian>().unwrap();
+
+        State { id, mode, name, internal_addr, external_addr, neighbours, sequence: 0, current_lock: [0; 32] }
+    }
+
+    pub fn get_node_information(&self) -> Node {
+        Node {
+            id: self.id,
+            mode: self.mode.clone(),
+            name: self.name.clone(),
+
+            // Intended panic. If an external node is requesting self state,
+            // external address should known.
+            external_addr: self.external_addr.clone().unwrap(),
+        }
     }
 
     pub fn get_cluster_size(&self) -> usize {
@@ -57,13 +79,13 @@ impl State {
     }
 
     pub fn change_mode(&mut self, mode: Mode) {
-        self.self_node_information.mode = mode;
+        self.mode = mode;
     }
 
     pub fn get_neighbour_addrs(&self) -> Vec<SocketAddr> {
         let neighbour_list: Vec<Node> = self.get_active_neighbours();
 
-        let neighbour_list: Vec<SocketAddr> = neighbour_list.iter().map(|node| { node.host }).collect(); // get socketaddrs
+        let neighbour_list: Vec<SocketAddr> = neighbour_list.iter().map(|node| { node.external_addr }).collect(); // get socketaddrs
 
         neighbour_list
     }
@@ -82,7 +104,7 @@ pub struct Node {
     pub id: u16,
     pub mode: Mode,
     pub name: String,
-    pub host: SocketAddr,
+    pub external_addr: SocketAddr,
 }
 
 impl Hash for Node {
@@ -103,7 +125,7 @@ impl Node {
     pub fn new(name: String, mode: Mode, host: SocketAddr) -> Node {
         let id = Sha256::digest(name.as_bytes()).as_slice().read_u16::<BigEndian>().unwrap();
 
-        Node { name, mode, host, id }
+        Node { name, mode, external_addr: host, id }
     }
 }
 
