@@ -4,7 +4,7 @@ use rayon::prelude::*;
 use std::net::{SocketAddr, TcpStream};
 use crate::proto::{ProtoParcel, Type, Body};
 use crate::net::{write_parcel, read_parcel};
-use log::{debug, error, info, trace, warn};
+use log::{error, info};
 
 /*
     Retrieves sequence number from each host provided, returning the largest(most-latest)

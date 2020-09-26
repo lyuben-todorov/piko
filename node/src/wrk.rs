@@ -4,7 +4,7 @@ use std::sync::{RwLock, Arc, Mutex};
 
 use crate::req::{push_state::push_state, seq_recovery::seq_recovery};
 
-use log::{debug, error, info, trace, warn};
+use log::{info};
 use std::sync::mpsc::Receiver;
 use crate::proto::{Pledge, ResourceRequest};
 use std::collections::{BinaryHeap, HashMap};
@@ -33,6 +33,7 @@ pub fn wrk(state: Arc<RwLock<State>>, pledge_queue: Arc<Mutex<BinaryHeap<Resourc
     drop(state_ref);
 
     for pledge in recv.iter() {
+        info!("Processing pledge");
         match pledge {
             Pledge::Kuchek => {
                 let q_ref = pledge_queue.lock().unwrap();

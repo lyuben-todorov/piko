@@ -223,7 +223,7 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>,
 
                     publish(&state_ref.get_neighbour_addrs(), req);
 
-                    /// ack client
+                    // ack client
                     ok(&mut stream);
 
                     let _release: ResourceRelease = ResourceRelease {

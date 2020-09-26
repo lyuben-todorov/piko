@@ -10,9 +10,8 @@ use byteorder::{ReadBytesExt, WriteBytesExt};
 use crate::internal::ThreadSignal;
 use crate::req::add_node::add_node;
 
-use log::{debug, error, info, trace, warn};
+use log::{error, info, warn};
 use std::collections::{BinaryHeap, HashMap};
-use sha2::{Digest};
 use std::error::Error;
 use std::sync::mpsc::Sender;
 
@@ -65,7 +64,7 @@ pub fn is_acked(response: ProtoParcel, ack_id: u64) -> ThreadSignal {
 }
 
 pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, pledge_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>>,
-                       f_access: Arc<Mutex<bool>>, _wrk: Sender<Pledge>) {
+                       f_access: Arc<Mutex<bool>>, wrk: Sender<Pledge>) {
     info!("Started Listener thread!");
 
     let _pending_messages: Arc<HashMap<u16, MessageWrapper>> = Arc::new(HashMap::new());
@@ -76,6 +75,8 @@ pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, pledge_qu
         let state_ref = Arc::clone(&state);
         let f_access = Arc::clone(&f_access);
         let pledge_queue = Arc::clone(&pledge_queue);
+        let wrk = wrk.clone();
+
         rayon::spawn(move || {
             let parcel = match read_parcel(&mut stream) {
                 Ok(parcel) => parcel,
@@ -180,7 +181,7 @@ pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, pledge_qu
                         write_parcel(&mut stream, &ack);
                         drop(lock);
 
-
+                        wrk.send(Pledge::Kuchek).unwrap();
                     }
                 }
                 Type::ResourceRelease => {
@@ -190,7 +191,7 @@ pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, pledge_qu
                         let state = state_ref.read().unwrap();
 
                         if state.current_lock == message_hash {
-                            let _resource_release: ResourceRelease = ResourceRelease {
+                            let resource_release: ResourceRelease = ResourceRelease {
                                 owner: parcel.sender_id,
                                 message_hash,
                                 timestamp,
@@ -203,6 +204,7 @@ pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, pledge_qu
                                 sequence,
                             };
 
+                            wrk.send(Pledge::ResourceRelease(resource_release)).unwrap();
 
                             let parcel = ProtoParcel::ack(parcel.id);
                             write_parcel(&mut stream, &parcel);

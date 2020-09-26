@@ -6,7 +6,7 @@ use crate::proto::{Type, ProtoParcel, Body};
 use std::sync::mpsc::{Sender, Receiver};
 use std::collections::HashSet;
 use rayon::prelude::*;
-use log::{debug, error, info, trace, warn};
+use log::{error, info};
 
 use crate::net::{write_parcel, read_parcel};
 

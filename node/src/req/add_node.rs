@@ -9,7 +9,7 @@ use std::sync::mpsc;
 use crate::proto::{ProtoParcel};
 use rayon::prelude::*;
 use crate::net::{write_parcel, read_parcel, is_acked};
-use log::{debug, error, info, trace, warn};
+use log::{error, info};
 
 pub fn add_node(neighbour_list: &Vec<SocketAddr>, nodes: Vec<Node>) {
     let (sender, receiver): (Sender<ThreadSignal>, Receiver<ThreadSignal>) = mpsc::channel(); // setup channel for results

@@ -6,7 +6,7 @@ use rayon::prelude::*;
 use crate::net::{write_parcel, read_parcel, is_acked};
 use crate::state::Mode;
 use crate::internal::ThreadSignal;
-use log::{debug, error, info, trace, warn};
+use log::{error, info};
 
 /*
     Pushes state update to each host given.
