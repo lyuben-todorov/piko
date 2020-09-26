@@ -11,11 +11,12 @@ use std::error::Error;
 use sha2::{Sha256, Digest};
 
 use chrono::{Utc};
-use crate::proto::{ResourceRequest, ResourceRelease, MessageWrapper};
+use crate::proto::{ResourceRequest, ResourceRelease, MessageWrapper, Pledge};
 use crate::req::publish::publish;
 use crate::state::State;
 
 use log::{info, error, debug};
+use std::sync::mpsc::Sender;
 
 pub struct Client<'a> {
     identity: u64,
@@ -127,7 +128,7 @@ fn err(stream: &mut TcpStream, message: &str) {
     write_res(stream, ClientRes::Error { message: message.to_string() });
 }
 
-pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>,
+pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, wrk: Sender<Pledge>,
                        pledge_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>>, _f_access: Arc<Mutex<bool>>,
                        client_list: Arc<RwLock<HashMap<u64, RwLock<Client<'static>>>>>) {
     for stream in listener.incoming() {
@@ -136,7 +137,7 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>,
         let client_list = client_list.clone();
         let state_ref = state.clone();
         let pledge_queue = Arc::clone(&pledge_queue);
-
+        let wrk = wrk.clone();
         rayon::spawn(move || {
             // debug!("Received message from client!");
             let req = match read_req(&mut stream) {
@@ -226,7 +227,7 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>,
                     // ack client
                     ok(&mut stream);
 
-                    let _release: ResourceRelease = ResourceRelease {
+                    let release: ResourceRelease = ResourceRelease {
                         owner: *crate::proto::SENDER.lock().unwrap(),
                         message_hash,
                         timestamp,
@@ -238,6 +239,7 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>,
                         local: false,
                         sequence: 0,
                     };
+                    wrk.send(Pledge::Kuchek);
                 }
             }
         })

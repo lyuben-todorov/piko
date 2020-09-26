@@ -139,7 +139,7 @@ fn main() {
 
     let neighbours = HashMap::<u16, Node>::new();
 
-    let (network_sender, work_receiver): (Sender<Pledge>, Receiver<Pledge>) = mpsc::channel();
+    let (pledge_sender, work_receiver): (Sender<Pledge>, Receiver<Pledge>) = mpsc::channel();
 
     // Initiate state & shared data structures
     let state = Arc::new(RwLock::new(State::new(Mode::Dsc, name, addr, external_addr, neighbours)));
@@ -151,14 +151,19 @@ fn main() {
     let state_ref = state.clone();
     let pledge_queue_ref = pledge_queue.clone();
     let f_lock_ref = f_lock.clone();
-    rayon::spawn(move || listener_thread(cluster_socket, state_ref, pledge_queue_ref, f_lock_ref, network_sender));
+    let pledge_sender_ref = pledge_sender.clone();
+
+    rayon::spawn(move || listener_thread(cluster_socket, state_ref, pledge_queue_ref,
+                                         f_lock_ref, pledge_sender_ref));
 
     // Start client listener thread
     let state_ref = state.clone();
     let pledge_queue_ref = pledge_queue.clone();
     let f_lock_ref = f_lock.clone();
     let client_list_ref = client_list.clone();
-    rayon::spawn(move || client_listener(client_socket, state_ref, pledge_queue_ref, f_lock_ref, client_list_ref));
+    let pledge_sender_ref = pledge_sender.clone();
+    rayon::spawn(move || client_listener(client_socket, state_ref, pledge_sender_ref,
+                                         pledge_queue_ref, f_lock_ref, client_list_ref));
 
     // Start heartbeat thread
     let state_ref = state.clone();
@@ -178,7 +183,7 @@ fn main() {
             }
             Mode::Wrk => {
                 drop(state_lock);
-                wrk(state.clone(), pledge_queue.clone(),&work_receiver, client_list.clone());
+                wrk(state.clone(), pledge_queue.clone(), &work_receiver, client_list.clone());
             }
             Mode::Err => {}
             Mode::Panic => {}

@@ -40,11 +40,12 @@ pub fn wrk(state: Arc<RwLock<State>>, pledge_queue: Arc<Mutex<BinaryHeap<Resourc
                 let pledge = q_ref.peek().unwrap();
 
                 if pledge.owner == self_id {
-                    println!("Consuming resource! node {} message {}", pledge.owner, String::from_utf8_lossy(&pledge.message_hash));
+                    info!("Consuming resource! node {} message {}", pledge.owner, String::from_utf8_lossy(&pledge.message_hash));
                     // consume resource
                 }
             }
-            Pledge::ResourceRelease(_rel) => {
+            Pledge::ResourceRelease(rel) => {
+                println!("Releaseeee")
                 // propagate release to clients
             }
         }
