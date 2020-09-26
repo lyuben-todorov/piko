@@ -80,6 +80,11 @@ impl ClientReq {
             message,
         }
     }
+    pub fn poll(client_id: u64) -> ClientReq {
+        ClientReq::Poll {
+            client_id
+        }
+    }
 }
 
 ///
@@ -167,20 +172,29 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, pledge_
                 }
                 ClientReq::Poll { client_id } => {
                     let client_list = client_list.read().unwrap();
-                    let mut message_dequeue = client_list.get(&client_id).unwrap().write().unwrap();
-                    let message = message_dequeue.message_queue.pop_front();
+                    let mut client = match client_list.get(&client_id) {
+                        None => {
+                            err(&mut stream, "client not subscribed.");
+                            return;
+                        }
+                        Some(client) => { client }
+                    };
+                    let mut client = client.write().unwrap();
+
+                    let message = client.message_queue.pop_front();
+
                     match message {
                         None => {
                             // write empty buffer
                             let res = ClientRes::Success {
-                                message: "".to_string(),
+                                message: "Queue empty".to_string(),
                                 bytes: vec![],
                             };
                             write_res(&mut stream, res);
                         }
                         Some(message) => {
                             let res = ClientRes::Success {
-                                message: "".to_string(),
+                                message: "Message:".to_string(),
                                 bytes: message.to_vec(),
                             };
                             write_res(&mut stream, res)
@@ -208,6 +222,10 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, pledge_
                     drop(pledge_queue);
 
                     publish(&state_ref.get_neighbour_addrs(), req);
+
+                    /// ack client
+                    ok(&mut stream);
+
                     let _release: ResourceRelease = ResourceRelease {
                         owner: *crate::proto::SENDER.lock().unwrap(),
                         message_hash,
