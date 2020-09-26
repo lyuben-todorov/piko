@@ -151,7 +151,7 @@ fn main() {
     let state_ref = state.clone();
     let pledge_queue_ref = pledge_queue.clone();
     let f_lock_ref = f_lock.clone();
-    rayon::spawn(move || listener_thread(cluster_socket, state_ref, pledge_queue_ref, f_lock_ref));
+    rayon::spawn(move || listener_thread(cluster_socket, state_ref, pledge_queue_ref, f_lock_ref, network_sender));
 
     // Start client listener thread
     let state_ref = state.clone();
