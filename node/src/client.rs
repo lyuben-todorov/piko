@@ -17,7 +17,7 @@ use crate::state::State;
 
 use log::{info, error, debug};
 
-struct Client<'a> {
+pub struct Client<'a> {
     identity: u64,
     message_queue: VecDeque<&'a Vec<u8>>,
 }
@@ -127,9 +127,9 @@ fn err(stream: &mut TcpStream, message: &str) {
     write_res(stream, ClientRes::Error { message: message.to_string() });
 }
 
-pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, pledge_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>>, _f_access: Arc<Mutex<bool>>) {
-    let client_list: Arc<RwLock<HashMap<u64, RwLock<Client>>>> = Arc::new(RwLock::new(HashMap::<u64, RwLock<Client>>::new()));
-
+pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>,
+                       pledge_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>>, _f_access: Arc<Mutex<bool>>,
+                       client_list: Arc<RwLock<HashMap<u64, RwLock<Client<'static>>>>>) {
     for stream in listener.incoming() {
         let mut stream = stream.unwrap();
 

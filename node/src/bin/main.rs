@@ -24,14 +24,45 @@ use std::sync::{Arc, mpsc, RwLock, Mutex};
 use std::sync::mpsc::{Sender, Receiver};
 
 use piko::internal::ThreadSignal;
-use piko::proto::{set_sender_id, ResourceRequest};
+use piko::proto::{set_sender_id, ResourceRequest, Pledge};
 
 use fern::colors::{Color, ColoredLevelConfig};
 use log::{info};
 
 use piko::heartbeat::heartbeat;
-use piko::client::client_listener;
+use piko::client::{client_listener, Client};
 use piko::wrk::wrk;
+
+
+fn setup_logger() {
+    let colors_line = ColoredLevelConfig::new()
+        .error(Color::Red)
+        .warn(Color::Yellow)
+        .info(Color::White)
+        .debug(Color::White)
+        .trace(Color::BrightBlack);
+
+    let colors_level = colors_line.clone().info(Color::Green);
+    fern::Dispatch::new()
+        .format(move |out, message, record| {
+            out.finish(format_args!(
+                "{color_line}[{date}][{target}][{level}{color_line}] {message}\x1B[0m",
+                color_line = format_args!(
+                    "\x1B[{}m",
+                    colors_line.get_color(&record.level()).to_fg_str()
+                ),
+                date = chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
+                target = record.target(),
+                level = colors_level.color(record.level()),
+                message = message,
+            ));
+        })
+        .level(log::LevelFilter::Debug)
+        // output to stdout
+        .chain(std::io::stdout())
+        .apply()
+        .unwrap();
+}
 
 fn main() {
     setup_logger();
@@ -108,12 +139,11 @@ fn main() {
 
     let neighbours = HashMap::<u16, Node>::new();
 
+    let (network_sender, work_receiver): (Sender<Pledge>, Receiver<Pledge>) = mpsc::channel();
 
     // Initiate state & shared data structures
     let state = Arc::new(RwLock::new(State::new(Mode::Dsc, name, addr, external_addr, neighbours)));
-
-    set_sender_id(state.read().unwrap().id);
-
+    let client_list: Arc<RwLock<HashMap<u64, RwLock<Client>>>> = Arc::new(RwLock::new(HashMap::<u64, RwLock<Client>>::new()));
     let pledge_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>> = Arc::new(Mutex::new(BinaryHeap::new()));
     let f_lock: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
 
@@ -127,7 +157,8 @@ fn main() {
     let state_ref = state.clone();
     let pledge_queue_ref = pledge_queue.clone();
     let f_lock_ref = f_lock.clone();
-    rayon::spawn(move || client_listener(client_socket, state_ref, pledge_queue_ref, f_lock_ref));
+    let client_list_ref = client_list.clone();
+    rayon::spawn(move || client_listener(client_socket, state_ref, pledge_queue_ref, f_lock_ref, client_list_ref));
 
     // Start heartbeat thread
     let state_ref = state.clone();
@@ -147,7 +178,7 @@ fn main() {
             }
             Mode::Wrk => {
                 drop(state_lock);
-                wrk(state.clone());
+                wrk(state.clone(), pledge_queue.clone(),&work_receiver, client_list.clone());
             }
             Mode::Err => {}
             Mode::Panic => {}
@@ -161,34 +192,4 @@ fn main() {
 
 
     info!("Shutting down.");
-}
-
-fn setup_logger() {
-    let colors_line = ColoredLevelConfig::new()
-        .error(Color::Red)
-        .warn(Color::Yellow)
-        .info(Color::White)
-        .debug(Color::White)
-        .trace(Color::BrightBlack);
-
-    let colors_level = colors_line.clone().info(Color::Green);
-    fern::Dispatch::new()
-        .format(move |out, message, record| {
-            out.finish(format_args!(
-                "{color_line}[{date}][{target}][{level}{color_line}] {message}\x1B[0m",
-                color_line = format_args!(
-                    "\x1B[{}m",
-                    colors_line.get_color(&record.level()).to_fg_str()
-                ),
-                date = chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
-                target = record.target(),
-                level = colors_level.color(record.level()),
-                message = message,
-            ));
-        })
-        .level(log::LevelFilter::Debug)
-        // output to stdout
-        .chain(std::io::stdout())
-        .apply()
-        .unwrap();
 }

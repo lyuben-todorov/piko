@@ -175,9 +175,8 @@ pub struct ResourceRelease {
     pub sequence: u16,
 }
 
-#[enum_dispatch]
 pub enum Pledge {
-    ResourceRequest(ResourceRequest),
+    Kuchek,
     ResourceRelease(ResourceRelease),
 }
 

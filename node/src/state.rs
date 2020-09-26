@@ -11,6 +11,7 @@ use serde::export::Formatter;
 use std::fmt;
 use std::net::SocketAddr;
 use crate::state::Mode::Wrk;
+use crate::proto::set_sender_id;
 
 
 #[derive(FromPrimitive, ToPrimitive, Deserialize, Serialize, Clone, PartialEq)]
@@ -54,6 +55,8 @@ impl State {
                neighbours: HashMap<u16, Node>) -> Self {
 
         let id = Sha256::digest(name.as_bytes()).as_slice().read_u16::<BigEndian>().unwrap();
+
+        set_sender_id(id);
 
         State { id, mode, name, internal_addr, external_addr, neighbours, sequence: 0, current_lock: [0; 32] }
     }
