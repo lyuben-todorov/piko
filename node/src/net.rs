@@ -24,7 +24,7 @@ pub fn read_parcel(stream: &mut TcpStream) -> Result<ProtoParcel, Box<dyn Error>
     let mut buf = vec![0u8; size as usize];
     stream.read_exact(&mut buf)?;
 
-    let proto_parcel: ProtoParcel = serde_cbor::from_slice(buf.as_slice()).unwrap();
+    let proto_parcel: ProtoParcel = serde_cbor::from_slice(buf.as_slice())?;
     Ok(proto_parcel)
 }
 
