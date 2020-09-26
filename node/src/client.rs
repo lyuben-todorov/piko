@@ -172,7 +172,7 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>,
                 }
                 ClientReq::Poll { client_id } => {
                     let client_list = client_list.read().unwrap();
-                    let mut client = match client_list.get(&client_id) {
+                    let client = match client_list.get(&client_id) {
                         None => {
                             err(&mut stream, "client not subscribed.");
                             return;

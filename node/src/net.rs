@@ -65,7 +65,7 @@ pub fn is_acked(response: ProtoParcel, ack_id: u64) -> ThreadSignal {
 }
 
 pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, pledge_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>>,
-                       f_access: Arc<Mutex<bool>>, wrk: Sender<Pledge>) {
+                       f_access: Arc<Mutex<bool>>, _wrk: Sender<Pledge>) {
     info!("Started Listener thread!");
 
     let _pending_messages: Arc<HashMap<u16, MessageWrapper>> = Arc::new(HashMap::new());

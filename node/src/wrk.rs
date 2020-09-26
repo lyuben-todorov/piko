@@ -1,7 +1,7 @@
 use crate::state::{State, Mode};
 use std::sync::{RwLock, Arc, Mutex};
 
-use std::thread::park;
+
 use crate::req::{push_state::push_state, seq_recovery::seq_recovery};
 
 use log::{debug, error, info, trace, warn};
@@ -14,7 +14,7 @@ use crate::client::Client;
 /// Tasked with maintaining protocol consistency
 ///
 pub fn wrk(state: Arc<RwLock<State>>, pledge_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>>,
-           recv: &Receiver<Pledge>, client_list: Arc<RwLock<HashMap<u64, RwLock<Client>>>>) {
+           recv: &Receiver<Pledge>, _client_list: Arc<RwLock<HashMap<u64, RwLock<Client>>>>) {
     let mut state_ref = state.write().unwrap();
 
     let self_id = state_ref.id;
@@ -43,7 +43,7 @@ pub fn wrk(state: Arc<RwLock<State>>, pledge_queue: Arc<Mutex<BinaryHeap<Resourc
                     // consume resource
                 }
             }
-            Pledge::ResourceRelease(rel) => {
+            Pledge::ResourceRelease(_rel) => {
                 // propagate release to clients
             }
         }

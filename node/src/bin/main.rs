@@ -24,7 +24,7 @@ use std::sync::{Arc, mpsc, RwLock, Mutex};
 use std::sync::mpsc::{Sender, Receiver};
 
 use piko::internal::ThreadSignal;
-use piko::proto::{set_sender_id, ResourceRequest, Pledge};
+use piko::proto::{ResourceRequest, Pledge};
 
 use fern::colors::{Color, ColoredLevelConfig};
 use log::{info};
