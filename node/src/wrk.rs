@@ -6,7 +6,7 @@ use crate::req::{push_state::push_state, seq_recovery::seq_recovery};
 
 use log::{info};
 use std::sync::mpsc::Receiver;
-use crate::proto::{Pledge, ResourceRequest};
+use crate::proto::{Pledge, ResourceRequest, MessageWrapper, ResourceRelease};
 use std::collections::{BinaryHeap, HashMap};
 use crate::client::Client;
 
@@ -14,7 +14,8 @@ use crate::client::Client;
 /// Tasked with maintaining protocol consistency
 ///
 pub fn wrk(state: Arc<RwLock<State>>, pledge_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>>,
-           recv: &Receiver<Pledge>, _client_list: Arc<RwLock<HashMap<u64, RwLock<Client>>>>) {
+           recv: &Receiver<Pledge>, _client_list: Arc<RwLock<HashMap<u64, RwLock<Client>>>>,
+           pending_messages: Arc<Mutex<HashMap<u16, ResourceRelease>>>) {
     let mut state_ref = state.write().unwrap();
 
     let self_id = state_ref.id;
@@ -41,11 +42,14 @@ pub fn wrk(state: Arc<RwLock<State>>, pledge_queue: Arc<Mutex<BinaryHeap<Resourc
 
                 if pledge.owner == self_id {
                     info!("Consuming resource! node {} message {}", pledge.owner, String::from_utf8_lossy(&pledge.message_hash));
-                    // consume resource
+                    let mut messages = pending_messages.lock().unwrap();
+                    let mut message = messages.entry(pledge.shorthand);
+
+
                 }
             }
             Pledge::ResourceRelease(rel) => {
-                println!("Releaseeee")
+                info!("Release {} ", rel.sequence)
                 // propagate release to clients
             }
         }

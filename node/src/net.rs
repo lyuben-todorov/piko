@@ -67,8 +67,6 @@ pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, pledge_qu
                        f_access: Arc<Mutex<bool>>, wrk: Sender<Pledge>) {
     info!("Started Listener thread!");
 
-    let _pending_messages: Arc<HashMap<u16, MessageWrapper>> = Arc::new(HashMap::new());
-
     for stream in socket.incoming() {
         let mut stream = stream.unwrap();
 
@@ -91,7 +89,7 @@ pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, pledge_qu
                     if let Body::DscReq { identity } = parcel.body {
                         info!("Received DscReq with id {} from node {}", parcel.id, parcel.sender_id);
 
-                        let mut neighbours: Vec<Node> = Vec::new();
+                        let mut neighbours = vec![];
 
                         let mut state_ref = state_ref.write().unwrap(); // acquire write lock
                         let state_neighbours: Vec<Node> = state_ref.neighbours.values().cloned().collect();
@@ -161,7 +159,7 @@ pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, pledge_qu
                     }
                 }
                 Type::ResourceRequest => {
-                    if let Body::ResourceRequest { message_hash, sequence, timestamp } = parcel.body {
+                    if let Body::ResourceRequest { message_hash, shorthand, sequence, timestamp } = parcel.body {
                         info!("Processing Resource Request with id {} from node {}", parcel.id, parcel.sender_id);
 
                         let lock = f_access.lock().unwrap();
@@ -169,6 +167,7 @@ pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, pledge_qu
                         let resource_pledge: ResourceRequest = ResourceRequest {
                             owner: parcel.sender_id,
                             message_hash,
+                            shorthand,
                             timestamp,
                             sequence,
                         };
@@ -185,7 +184,7 @@ pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, pledge_qu
                     }
                 }
                 Type::ResourceRelease => {
-                    if let Body::ResourceRelease { timestamp, message_hash, sequence, message } = parcel.body {
+                    if let Body::ResourceRelease { timestamp, message_hash, shorthand, sequence, message } = parcel.body {
                         info!("Processing Resource Release with id {} from node {}", parcel.id, parcel.sender_id);
 
                         let state = state_ref.read().unwrap();
@@ -194,6 +193,7 @@ pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, pledge_qu
                             let resource_release: ResourceRelease = ResourceRelease {
                                 owner: parcel.sender_id,
                                 message_hash,
+                                shorthand,
                                 timestamp,
                                 message: MessageWrapper {
                                     message,

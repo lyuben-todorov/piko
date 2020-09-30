@@ -24,7 +24,7 @@ use std::sync::{Arc, mpsc, RwLock, Mutex};
 use std::sync::mpsc::{Sender, Receiver};
 
 use piko::internal::ThreadSignal;
-use piko::proto::{ResourceRequest, Pledge};
+use piko::proto::{ResourceRequest, Pledge, MessageWrapper, ResourceRelease};
 
 use fern::colors::{Color, ColoredLevelConfig};
 use log::{info};
@@ -146,12 +146,14 @@ fn main() {
     let client_list: Arc<RwLock<HashMap<u64, RwLock<Client>>>> = Arc::new(RwLock::new(HashMap::<u64, RwLock<Client>>::new()));
     let pledge_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>> = Arc::new(Mutex::new(BinaryHeap::new()));
     let f_lock: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
+    let pending_messages: Arc<Mutex<HashMap<u16, ResourceRelease>>>= Arc::new(Mutex::new(HashMap::new()));
 
     // Start network listener thread
     let state_ref = state.clone();
     let pledge_queue_ref = pledge_queue.clone();
     let f_lock_ref = f_lock.clone();
     let pledge_sender_ref = pledge_sender.clone();
+    let pending_messages_ref = pending_messages.clone();
 
     rayon::spawn(move || listener_thread(cluster_socket, state_ref, pledge_queue_ref,
                                          f_lock_ref, pledge_sender_ref));
@@ -162,8 +164,15 @@ fn main() {
     let f_lock_ref = f_lock.clone();
     let client_list_ref = client_list.clone();
     let pledge_sender_ref = pledge_sender.clone();
-    rayon::spawn(move || client_listener(client_socket, state_ref, pledge_sender_ref,
-                                         pledge_queue_ref, f_lock_ref, client_list_ref));
+    rayon::spawn(move || client_listener(
+        client_socket,
+        state_ref,
+        pledge_sender_ref,
+        pledge_queue_ref,
+        f_lock_ref,
+        client_list_ref,
+        pending_messages_ref
+    ));
 
     // Start heartbeat thread
     let state_ref = state.clone();
@@ -183,7 +192,8 @@ fn main() {
             }
             Mode::Wrk => {
                 drop(state_lock);
-                wrk(state.clone(), pledge_queue.clone(), &work_receiver, client_list.clone());
+                wrk(state.clone(), pledge_queue.clone(), &work_receiver,
+                    client_list.clone(), pending_messages.clone());
             }
             Mode::Err => {}
             Mode::Panic => {}

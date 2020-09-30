@@ -130,13 +130,16 @@ fn err(stream: &mut TcpStream, message: &str) {
 
 pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, wrk: Sender<Pledge>,
                        pledge_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>>, _f_access: Arc<Mutex<bool>>,
-                       client_list: Arc<RwLock<HashMap<u64, RwLock<Client<'static>>>>>) {
+                       client_list: Arc<RwLock<HashMap<u64, RwLock<Client<'static>>>>>,
+                       pending_messages: Arc<Mutex<HashMap<u16, ResourceRelease>>>) {
+
     for stream in listener.incoming() {
         let mut stream = stream.unwrap();
 
         let client_list = client_list.clone();
         let state_ref = state.clone();
         let pledge_queue = Arc::clone(&pledge_queue);
+        let pending_messages = pending_messages.clone();
         let wrk = wrk.clone();
         rayon::spawn(move || {
             // debug!("Received message from client!");
@@ -208,15 +211,8 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, wrk: Se
 
                     let state_ref = state_ref.write().unwrap();
 
-                    let message_hash: [u8; 32] = Sha256::digest(message.as_slice()).into();
-                    let timestamp = Utc::now();
 
-                    let req: ResourceRequest = ResourceRequest {
-                        owner: *crate::proto::SENDER.lock().unwrap(),
-                        message_hash,
-                        timestamp,
-                        sequence: 0,
-                    };
+                    let (req, rel) = ResourceRequest::generate(message);
 
                     let mut pledge_queue = pledge_queue.lock().unwrap();
                     pledge_queue.push(req);
@@ -227,18 +223,9 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, wrk: Se
                     // ack client
                     ok(&mut stream);
 
-                    let release: ResourceRelease = ResourceRelease {
-                        owner: *crate::proto::SENDER.lock().unwrap(),
-                        message_hash,
-                        timestamp,
-                        message: MessageWrapper {
-                            message,
-                            sequence: 0,
-                            receiver_mask: 0,
-                        },
-                        local: false,
-                        sequence: 0,
-                    };
+                    let mut messages = pending_messages.lock().unwrap();
+                    messages.insert(rel.shorthand,rel);
+
                     wrk.send(Pledge::Kuchek);
                 }
             }

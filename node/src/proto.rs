@@ -15,6 +15,9 @@ use chrono::{DateTime, Utc};
 use std::cmp::Ordering;
 
 use std::net::SocketAddr;
+use sha2::{Sha256, Digest};
+use std::convert::TryInto;
+use byteorder::BigEndian;
 
 
 
@@ -120,12 +123,14 @@ pub enum Body {
     ResourceRequest {
         timestamp: DateTime<Utc>,
         message_hash: [u8; 32],
+        shorthand: u16,
         sequence: u16,
     },
 
     ResourceRelease {
         timestamp: DateTime<Utc>,
         message_hash: [u8; 32],
+        shorthand: u16,
         sequence: u16,
         message: Vec<u8>,
     },
@@ -150,6 +155,7 @@ pub struct MessageWrapper {
 pub struct ResourceRequest {
     pub owner: u16,
     pub message_hash: [u8; 32],
+    pub shorthand: u16,
     pub timestamp: DateTime<Utc>,
     pub sequence: u16,
 }
@@ -169,10 +175,46 @@ impl PartialOrd for ResourceRequest {
 pub struct ResourceRelease {
     pub owner: u16,
     pub message_hash: [u8; 32],
+    pub shorthand: u16,
     pub timestamp: DateTime<Utc>,
     pub message: MessageWrapper,
     pub local: bool,
     pub sequence: u16,
+}
+
+impl ResourceRequest {
+    pub fn generate(message: Vec<u8>) -> (ResourceRequest, ResourceRelease) {
+        let message_hash: [u8; 32] = Sha256::digest(message.as_slice()).into();
+        let shorthand = message_hash.chunks(2).into_iter().map(|x: &[u8]| {
+            let chunk: u16 = u16::from_be_bytes(x.try_into().unwrap());
+            chunk
+        }).fold(0, |x: u16, y: u16| { x ^ y });
+        println!("{}", shorthand);
+        let timestamp = Utc::now();
+
+        (
+            ResourceRequest {
+                owner: *crate::proto::SENDER.lock().unwrap(),
+                message_hash,
+                shorthand,
+                timestamp,
+                sequence: 0,
+            },
+            ResourceRelease {
+                owner: *crate::proto::SENDER.lock().unwrap(),
+                message_hash,
+                shorthand,
+                timestamp,
+                message: MessageWrapper {
+                    message,
+                    sequence: 0,
+                    receiver_mask: 0,
+                },
+                local: false,
+                sequence: 0,
+            }
+        )
+    }
 }
 
 pub enum Pledge {
@@ -305,11 +347,12 @@ impl ProtoParcel {
             body: Body::ResourceRequest {
                 timestamp: request.timestamp,
                 message_hash: request.message_hash,
+                shorthand: request.shorthand,
                 sequence: request.sequence,
             },
         }
     }
-    pub fn resource_release(message_hash: [u8; 32], timestamp: DateTime<Utc>, sequence: u16, message: Vec<u8>) -> ProtoParcel {
+    pub fn resource_release(message_hash: [u8; 32], shorthand: u16, timestamp: DateTime<Utc>, sequence: u16, message: Vec<u8>) -> ProtoParcel {
         ProtoParcel {
             id: generate_id(),
             proto_version: PROTO_VERSION.clone(),
@@ -319,6 +362,7 @@ impl ProtoParcel {
             body: Body::ResourceRelease {
                 timestamp,
                 message_hash,
+                shorthand,
                 sequence,
                 message,
             },
