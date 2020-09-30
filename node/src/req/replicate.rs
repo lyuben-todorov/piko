@@ -7,8 +7,8 @@ use std::sync::mpsc;
 use rayon::prelude::*;
 use crate::net::{write_parcel, read_parcel, is_acked};
 use log::{error, info};
-pub fn replicate_message(neighbour_list: &Vec<SocketAddr>, resource: ResourceRelease) {
-    let (sender, receiver): (Sender<ThreadSignal>, Receiver<ThreadSignal>) = mpsc::channel(); // setup channel for results
+pub fn replicate_message(neighbour_list: &Vec<SocketAddr>, _resource: ResourceRelease) {
+    let (sender, _receiver): (Sender<ThreadSignal>, Receiver<ThreadSignal>) = mpsc::channel(); // setup channel for results
 
     let req = ProtoParcel::ack(1);
 

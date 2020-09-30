@@ -6,7 +6,7 @@ use crate::req::{push_state::push_state, seq_recovery::seq_recovery};
 
 use log::{info};
 use std::sync::mpsc::Receiver;
-use crate::proto::{Pledge, ResourceRequest, MessageWrapper, ResourceRelease};
+use crate::proto::{Pledge, ResourceRequest, ResourceRelease};
 use std::collections::{BinaryHeap, HashMap};
 use crate::client::Client;
 
@@ -43,7 +43,7 @@ pub fn wrk(state: Arc<RwLock<State>>, pledge_queue: Arc<Mutex<BinaryHeap<Resourc
                 if pledge.owner == self_id {
                     info!("Consuming resource! node {} message {}", pledge.owner, String::from_utf8_lossy(&pledge.message_hash));
                     let mut messages = pending_messages.lock().unwrap();
-                    let mut message = messages.entry(pledge.shorthand);
+                    let _message = messages.entry(pledge.shorthand);
 
 
                 }

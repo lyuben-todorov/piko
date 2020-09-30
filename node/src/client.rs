@@ -8,10 +8,10 @@ use byteorder::{ReadBytesExt, WriteBytesExt};
 use std::io::{Read, Write};
 use std::error::Error;
 
-use sha2::{Sha256, Digest};
+use sha2::{Digest};
 
-use chrono::{Utc};
-use crate::proto::{ResourceRequest, ResourceRelease, MessageWrapper, Pledge};
+
+use crate::proto::{ResourceRequest, ResourceRelease, Pledge};
 use crate::req::publish::publish;
 use crate::state::State;
 

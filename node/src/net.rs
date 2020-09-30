@@ -11,7 +11,7 @@ use crate::internal::ThreadSignal;
 use crate::req::add_node::add_node;
 
 use log::{error, info, warn};
-use std::collections::{BinaryHeap, HashMap};
+use std::collections::{BinaryHeap};
 use std::error::Error;
 use std::sync::mpsc::Sender;
 
