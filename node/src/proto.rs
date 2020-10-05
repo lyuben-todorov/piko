@@ -11,16 +11,13 @@ use rand::{random};
 
 use std::sync::Mutex;
 use lazy_static::lazy_static;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, Timelike};
 use std::cmp::Ordering;
 
 use std::net::SocketAddr;
 use sha2::{Sha256, Digest};
 use std::convert::TryInto;
-
-
-
-
+use sha2::digest::DynDigest;
 lazy_static! {
     pub static ref PROTO_VERSION: String = "1.0".to_string();
     pub static ref SENDER: Mutex<u16> = Mutex::new(0);
@@ -178,14 +175,20 @@ pub struct ResourceRelease {
 
 impl ResourceRequest {
     pub fn generate(message: Vec<u8>) -> (ResourceRequest, ResourceRelease) {
-        let message_hash: [u8; 32] = Sha256::digest(message.as_slice()).into();
+        let mut hasher = Sha256::new();
+
+        let timestamp = Utc::now();
+
+        let time_hash = timestamp.nanosecond();
+        DynDigest::update(&mut hasher, message.as_slice());
+        DynDigest::update(&mut hasher, &timestamp.nanosecond().to_be_bytes());
+
+        let message_hash: [u8; 32] = hasher.finalize().into();
+
         let shorthand = message_hash.chunks(2).into_iter().map(|x: &[u8]| {
             let chunk: u16 = u16::from_be_bytes(x.try_into().unwrap());
             chunk
         }).fold(0, |x: u16, y: u16| { x ^ y });
-        println!("{}", shorthand);
-        let timestamp = Utc::now();
-
         let id =  *crate::proto::SENDER.lock().unwrap();
         (
             ResourceRequest {

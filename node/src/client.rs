@@ -220,9 +220,11 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, wrk: Se
                     drop(pledge_queue);
 
                     // Place eventual RELEASE on KV store
+                    debug!("Inserting {}", rel.shorthand);
                     let mut messages = pending_messages.lock().unwrap();
                     messages.insert(rel.shorthand,rel);
                     drop(messages);
+                    debug!("Inserted!");
 
                     // Publish REQUEST
                     let state_ref = state_ref.read().unwrap();

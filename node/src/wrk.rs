@@ -38,22 +38,29 @@ pub fn wrk(state: Arc<RwLock<State>>, pledge_queue: Arc<Mutex<BinaryHeap<Resourc
         match pledge {
             Pledge::Check => {
                 info!("Checking resource queue");
-                let q_ref = pledge_queue.lock().unwrap();
+                let mut q_ref = pledge_queue.lock().unwrap();
                 let pledge = q_ref.peek().unwrap();
 
                 if pledge.owner == self_id {
-                    info!("Consuming resource! node {} message {}", pledge.owner, String::from_utf8_lossy(&pledge.message_hash));
+                    let mut pledge = q_ref.pop().unwrap();
+
+                    info!("Consuming resource! node {} message {}", pledge.owner, pledge.shorthand);
+
                     let mut messages = pending_messages.lock().unwrap();
                     let message = messages.remove(&pledge.shorthand).unwrap();
 
                     let state = state.read().unwrap();
                     pub_rel(&state.get_neighbour_addrs(), message);
-
                 }
             }
             Pledge::ResourceRelease(rel) => {
-                info!("Release {} ", String::from_utf8(rel.message.message).unwrap())
-                // propagate release to clients
+                let mut q_ref = pledge_queue.lock().unwrap();
+                let pledge = q_ref.peek().unwrap();
+                if pledge.owner == rel.owner {
+                    let mut pledge = q_ref.pop().unwrap();
+                    info!("Neighbour exited CS! node {} message {}", pledge.owner, String::from_utf8(rel.message.message).unwrap());
+
+                }
             }
         }
     }
