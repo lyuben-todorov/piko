@@ -6,7 +6,7 @@ use crate::state::{State, Node};
 use std::sync::{Arc, RwLock, Mutex};
 use std::io::{Read, Write};
 use crate::proto::{ProtoParcel, Type, Body, MessageWrapper, ResourceRequest, ResourceRelease, Pledge};
-use byteorder::{ReadBytesExt, WriteBytesExt};
+use byteorder::{ReadBytesExt, WriteBytesExt, BigEndian, LittleEndian};
 use crate::internal::ThreadSignal;
 use crate::req::add_node::add_node;
 
@@ -17,10 +17,9 @@ use std::sync::mpsc::Sender;
 
 
 pub fn read_parcel(stream: &mut TcpStream) -> Result<ProtoParcel, Box<dyn Error>> {
-    let size = stream.read_u8()?;
+    let size: u64 = stream.read_u64::<LittleEndian>()?;
 
-    debug!("Expecting {} bytes", size);
-
+    // debug!("Expecting {} bytes", size);
     let mut buf = vec![0u8; size as usize];
     stream.read_exact(&mut buf)?;
 
@@ -31,10 +30,10 @@ pub fn read_parcel(stream: &mut TcpStream) -> Result<ProtoParcel, Box<dyn Error>
 pub fn write_parcel(stream: &mut TcpStream, parcel: &ProtoParcel) {
     let parcel = serde_cbor::to_vec(&parcel).unwrap();
     let buf = parcel.as_slice();
-    let count = buf.len();
+    let count: u64 = buf.len() as u64;
 
-    debug!("Writing {} bytes", count);
-    stream.write_u8(count as u8).unwrap();
+    // debug!("Writing {} bytes", count);
+    stream.write_u64::<LittleEndian>(count).unwrap();
     stream.write_all(buf).unwrap();
 }
 
@@ -182,7 +181,6 @@ pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, pledge_qu
                         let state = state_ref.read().unwrap();
 
                         if state.current_lock == resource_release.message_hash {
-
                             wrk.send(Pledge::ResourceRelease(resource_release)).unwrap();
 
                             let parcel = ProtoParcel::ack(parcel.id);

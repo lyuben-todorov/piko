@@ -111,7 +111,7 @@ fn read_req(stream: &mut TcpStream) -> Result<ClientReq, Box<dyn Error>> {
 fn write_res(stream: &mut TcpStream, res: ClientRes) {
     let buf = serde_cbor::to_vec(&res).unwrap();
 
-    debug!("Writing {} bytes to client", buf.len());
+    // debug!("Writing {} bytes to client", buf.len());
     stream.write_u8(buf.len() as u8).unwrap();
     stream.write_all(buf.as_slice()).unwrap();
 }
