@@ -6,11 +6,11 @@ use crate::state::{State, Node};
 use std::sync::{Arc, RwLock, Mutex};
 use std::io::{Read, Write};
 use crate::proto::{ProtoParcel, Type, Body, MessageWrapper, ResourceRequest, ResourceRelease, Pledge};
-use byteorder::{ReadBytesExt, WriteBytesExt, BigEndian, LittleEndian};
+use byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
 use crate::internal::TaskSignal;
 use crate::req::add_node::add_node;
 
-use log::{error, info, warn, debug};
+use log::{error, info, warn};
 use std::collections::{BinaryHeap};
 use std::error::Error;
 use std::sync::mpsc::Sender;

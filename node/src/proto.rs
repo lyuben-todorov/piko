@@ -179,7 +179,7 @@ impl ResourceRequest {
 
         let timestamp = Utc::now();
 
-        let time_hash = timestamp.nanosecond();
+        let _time_hash = timestamp.nanosecond();
         DynDigest::update(&mut hasher, message.as_slice());
         DynDigest::update(&mut hasher, &timestamp.nanosecond().to_be_bytes());
 

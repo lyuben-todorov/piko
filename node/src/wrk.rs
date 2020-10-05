@@ -42,7 +42,7 @@ pub fn wrk(state: Arc<RwLock<State>>, pledge_queue: Arc<Mutex<BinaryHeap<Resourc
                 let pledge = q_ref.peek().unwrap();
 
                 if pledge.owner == self_id {
-                    let mut pledge = q_ref.pop().unwrap();
+                    let pledge = q_ref.pop().unwrap();
 
                     info!("Consuming resource! node {} message {}", pledge.owner, pledge.shorthand);
 
@@ -57,7 +57,7 @@ pub fn wrk(state: Arc<RwLock<State>>, pledge_queue: Arc<Mutex<BinaryHeap<Resourc
                 let mut q_ref = pledge_queue.lock().unwrap();
                 let pledge = q_ref.peek().unwrap();
                 if pledge.owner == rel.owner {
-                    let mut pledge = q_ref.pop().unwrap();
+                    let pledge = q_ref.pop().unwrap();
                     info!("Neighbour exited CS! node {} message {}", pledge.owner, String::from_utf8(rel.message.message).unwrap());
 
                 }
