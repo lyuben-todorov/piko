@@ -52,7 +52,7 @@ pub fn wrk(state: Arc<RwLock<State>>, pledge_queue: Arc<Mutex<BinaryHeap<Resourc
                 }
             }
             Pledge::ResourceRelease(rel) => {
-                info!("Release {} ", rel.sequence)
+                info!("Release {} ", String::from_utf8(rel.message.message).unwrap())
                 // propagate release to clients
             }
         }

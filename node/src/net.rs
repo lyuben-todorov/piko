@@ -171,18 +171,16 @@ pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, pledge_qu
                         write_parcel(&mut stream, &ack);
                         drop(lock);
 
-                        wrk.send(Pledge::Check).unwrap();
                     }
                 }
                 Type::ResourceRelease => {
                     if let Body::ResourceRelease { resource_release } = parcel.body {
                         info!("Processing Resource Release with id {} from node {}", parcel.id, parcel.sender_id);
 
-                        let state = state_ref.read().unwrap();
+                        let pledge_queue = pledge_queue.lock().unwrap();
 
-                        if state.current_lock == resource_release.message_hash {
+                        if pledge_queue.peek().unwrap().message_hash == resource_release.message_hash {
                             wrk.send(Pledge::ResourceRelease(resource_release)).unwrap();
-
                             let parcel = ProtoParcel::ack(parcel.id);
                             write_parcel(&mut stream, &parcel);
                         } else {
