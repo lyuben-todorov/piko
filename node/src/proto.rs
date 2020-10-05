@@ -121,18 +121,11 @@ pub enum Body {
     },
 
     ResourceRequest {
-        timestamp: DateTime<Utc>,
-        message_hash: [u8; 32],
-        shorthand: u16,
-        sequence: u16,
+        resource_request: ResourceRequest
     },
 
     ResourceRelease {
-        timestamp: DateTime<Utc>,
-        message_hash: [u8; 32],
-        shorthand: u16,
-        sequence: u16,
-        message: Vec<u8>,
+        resource_release: ResourceRelease
     },
 
     ExtAddrRes {
@@ -144,14 +137,14 @@ pub enum Body {
     },
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct MessageWrapper {
     pub message: Vec<u8>,
     pub sequence: u16,
     pub receiver_mask: u32,
 }
 
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ResourceRequest {
     pub owner: u16,
     pub message_hash: [u8; 32],
@@ -172,6 +165,7 @@ impl PartialOrd for ResourceRequest {
     }
 }
 
+#[derive(Serialize,Deserialize)]
 pub struct ResourceRelease {
     pub owner: u16,
     pub message_hash: [u8; 32],
@@ -338,7 +332,7 @@ impl ProtoParcel {
             body: Body::Ack { message_id },
         }
     }
-    pub fn resource_request(request: ResourceRequest) -> ProtoParcel {
+    pub fn resource_request(resource_request: ResourceRequest) -> ProtoParcel {
         ProtoParcel {
             id: generate_id(),
             proto_version: PROTO_VERSION.clone(),
@@ -346,14 +340,11 @@ impl ProtoParcel {
             is_response: false,
             parcel_type: Type::ResourceRequest,
             body: Body::ResourceRequest {
-                timestamp: request.timestamp,
-                message_hash: request.message_hash,
-                shorthand: request.shorthand,
-                sequence: request.sequence,
+                resource_request
             },
         }
     }
-    pub fn resource_release(message_hash: [u8; 32], shorthand: u16, timestamp: DateTime<Utc>, sequence: u16, message: Vec<u8>) -> ProtoParcel {
+    pub fn resource_release(resource_release: ResourceRelease) -> ProtoParcel {
         ProtoParcel {
             id: generate_id(),
             proto_version: PROTO_VERSION.clone(),
@@ -361,12 +352,8 @@ impl ProtoParcel {
             is_response: false,
             parcel_type: Type::ResourceRelease,
             body: Body::ResourceRelease {
-                timestamp,
-                message_hash,
-                shorthand,
-                sequence,
-                message,
-            },
+                resource_release
+            }
         }
     }
 

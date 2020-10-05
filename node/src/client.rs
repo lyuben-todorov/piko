@@ -12,7 +12,7 @@ use sha2::{Digest};
 
 
 use crate::proto::{ResourceRequest, ResourceRelease, Pledge};
-use crate::req::publish::publish;
+use crate::req::publish::pub_req;
 use crate::state::State;
 
 use log::{info, error, debug};
@@ -209,29 +209,28 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, wrk: Se
                 ClientReq::Publish { client_id, message } => {
                     info!("Publishing message from client {} with size {}", client_id, message.len());
 
-                    let state_ref = state_ref.write().unwrap();
-
-                    println!("0");
 
                     let (req, rel) = ResourceRequest::generate(message);
 
-                    println!("a");
 
+                    // Place REQUEST on local queue
                     let mut pledge_queue = pledge_queue.lock().unwrap();
-                    println!("b");
-
                     pledge_queue.push(req);
                     drop(pledge_queue);
 
-                    publish(&state_ref.get_neighbour_addrs(), req);
+                    // Place eventual RELEASE on KV store
+                    let mut messages = pending_messages.lock().unwrap();
+                    messages.insert(rel.shorthand,rel);
+                    drop(messages);
+
+                    // Publish REQUEST
+                    let state_ref = state_ref.read().unwrap();
+                    pub_req(&state_ref.get_neighbour_addrs(), req);
+                    drop(state_ref);
 
                     // ack client
                     ok(&mut stream);
 
-                    let mut messages = pending_messages.lock().unwrap();
-                    messages.insert(rel.shorthand,rel);
-
-                    wrk.send(Pledge::Kuchek);
                 }
             }
         })
