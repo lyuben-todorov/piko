@@ -192,16 +192,17 @@ impl ResourceRequest {
         println!("{}", shorthand);
         let timestamp = Utc::now();
 
+        let id =  *crate::proto::SENDER.lock().unwrap();
         (
             ResourceRequest {
-                owner: *crate::proto::SENDER.lock().unwrap(),
+                owner: id,
                 message_hash,
                 shorthand,
                 timestamp,
                 sequence: 0,
             },
             ResourceRelease {
-                owner: *crate::proto::SENDER.lock().unwrap(),
+                owner: id,
                 message_hash,
                 shorthand,
                 timestamp,

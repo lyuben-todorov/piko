@@ -211,10 +211,15 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, wrk: Se
 
                     let state_ref = state_ref.write().unwrap();
 
+                    println!("0");
 
                     let (req, rel) = ResourceRequest::generate(message);
 
+                    println!("a");
+
                     let mut pledge_queue = pledge_queue.lock().unwrap();
+                    println!("b");
+
                     pledge_queue.push(req);
                     drop(pledge_queue);
 
