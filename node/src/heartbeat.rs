@@ -84,7 +84,7 @@ pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, timeout: u32, rx: R
 }
 
 fn ping(node: &Node, req_parcel: &ProtoParcel, tx: &mut Sender<(u16, bool)>) {
-    info!("Sending Ping to {}", node.id);
+    // info!("Sending Ping to {}", node.id);
 
     let mut stream = match TcpStream::connect(node.external_addr) {
         Ok(stream) => stream,

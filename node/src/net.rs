@@ -10,7 +10,7 @@ use byteorder::{ReadBytesExt, WriteBytesExt};
 use crate::internal::ThreadSignal;
 use crate::req::add_node::add_node;
 
-use log::{error, info, warn};
+use log::{error, info, warn, debug};
 use std::collections::{BinaryHeap};
 use std::error::Error;
 use std::sync::mpsc::Sender;
@@ -19,7 +19,7 @@ use std::sync::mpsc::Sender;
 pub fn read_parcel(stream: &mut TcpStream) -> Result<ProtoParcel, Box<dyn Error>> {
     let size = stream.read_u8()?;
 
-    // debug!("Expecting {} bytes", size);
+    debug!("Expecting {} bytes", size);
 
     let mut buf = vec![0u8; size as usize];
     stream.read_exact(&mut buf)?;
@@ -33,7 +33,7 @@ pub fn write_parcel(stream: &mut TcpStream, parcel: &ProtoParcel) {
     let buf = parcel.as_slice();
     let count = buf.len();
 
-    // println!("Writing {} bytes", count);
+    debug!("Writing {} bytes", count);
     stream.write_u8(count as u8).unwrap();
     stream.write_all(buf).unwrap();
 }
@@ -125,7 +125,7 @@ pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, pledge_qu
                     write_parcel(&mut stream, &parcel);
                 }
                 Type::Ping => {
-                    info!("Received Ping with id {} from node {}", parcel.id, parcel.sender_id);
+                    // debug!("Received Ping with id {} from node {}", parcel.id, parcel.sender_id);
                     let state = state_ref.write().unwrap(); // acquire write lock
                     let parcel = ProtoParcel::pong();
                     drop(state);

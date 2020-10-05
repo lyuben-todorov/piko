@@ -37,6 +37,7 @@ fn publish_request(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<
             return;
         }
     };
+
     let m_id = req_parcel.id;
     write_parcel(&mut stream, &req_parcel);
 
