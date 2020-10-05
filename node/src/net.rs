@@ -7,7 +7,7 @@ use std::sync::{Arc, RwLock, Mutex};
 use std::io::{Read, Write};
 use crate::proto::{ProtoParcel, Type, Body, MessageWrapper, ResourceRequest, ResourceRelease, Pledge};
 use byteorder::{ReadBytesExt, WriteBytesExt, BigEndian, LittleEndian};
-use crate::internal::ThreadSignal;
+use crate::internal::TaskSignal;
 use crate::req::add_node::add_node;
 
 use log::{error, info, warn, debug};
@@ -37,27 +37,27 @@ pub fn write_parcel(stream: &mut TcpStream, parcel: &ProtoParcel) {
     stream.write_all(buf).unwrap();
 }
 
-pub fn is_acked(response: ProtoParcel, ack_id: u64) -> ThreadSignal {
+pub fn is_acked(response: ProtoParcel, ack_id: u64) -> TaskSignal {
     match response.parcel_type {
         Type::Ack => {
             if let Body::Ack { message_id } = response.body {
                 if message_id == ack_id {
                     info!("Acked {}", message_id);
-                    ThreadSignal::Success
+                    TaskSignal::Success
                 } else {
-                    ThreadSignal::Fail
+                    TaskSignal::Fail
                 }
             } else {
                 error!("Body-header type mismatch!");
-                ThreadSignal::Fail
+                TaskSignal::Fail
             }
         }
         Type::ProtoError => {
-            ThreadSignal::Fail
+            TaskSignal::Fail
         }
         _ => {
             error!("Expected acknowledge, got {}", response.parcel_type);
-            ThreadSignal::Fail
+            TaskSignal::Fail
         }
     }
 }
@@ -171,7 +171,7 @@ pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, pledge_qu
                         write_parcel(&mut stream, &ack);
                         drop(lock);
 
-                        wrk.send(Pledge::Kuchek).unwrap();
+                        wrk.send(Pledge::Check).unwrap();
                     }
                 }
                 Type::ResourceRelease => {

@@ -213,7 +213,7 @@ impl ResourceRequest {
 }
 
 pub enum Pledge {
-    Kuchek,
+    Check,
     ResourceRelease(ResourceRelease),
 }
 

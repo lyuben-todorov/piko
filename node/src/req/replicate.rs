@@ -2,13 +2,13 @@
 use std::net::{SocketAddr, TcpStream};
 use crate::proto::{ResourceRelease, ProtoParcel};
 use std::sync::mpsc::{Sender, Receiver};
-use crate::internal::ThreadSignal;
+use crate::internal::TaskSignal;
 use std::sync::mpsc;
 use rayon::prelude::*;
 use crate::net::{write_parcel, read_parcel, is_acked};
 use log::{error, info};
 pub fn replicate_message(neighbour_list: &Vec<SocketAddr>, _resource: ResourceRelease) {
-    let (sender, _receiver): (Sender<ThreadSignal>, Receiver<ThreadSignal>) = mpsc::channel(); // setup channel for results
+    let (sender, _receiver): (Sender<TaskSignal>, Receiver<TaskSignal>) = mpsc::channel(); // setup channel for results
 
     let req = ProtoParcel::ack(1);
 
@@ -19,7 +19,7 @@ pub fn replicate_message(neighbour_list: &Vec<SocketAddr>, _resource: ResourceRe
     // end parallel scope
 }
 
-fn update(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<ThreadSignal>) {
+fn update(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<TaskSignal>) {
     info!("Pushing event to {}", host);
     let mut stream = match TcpStream::connect(host) {
         Ok(stream) => stream,

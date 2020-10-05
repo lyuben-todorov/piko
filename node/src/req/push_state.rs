@@ -5,14 +5,14 @@ use crate::proto::{ProtoParcel};
 use rayon::prelude::*;
 use crate::net::{write_parcel, read_parcel, is_acked};
 use crate::state::Mode;
-use crate::internal::ThreadSignal;
+use crate::internal::TaskSignal;
 use log::{error, info};
 
 /*
     Pushes state update to each host given.
  */
 pub fn push_state(neighbour_list: &Vec<SocketAddr>, state: Mode) {
-    let (sender, _receiver): (Sender<ThreadSignal>, Receiver<ThreadSignal>) = mpsc::channel(); // setup channel for results
+    let (sender, _receiver): (Sender<TaskSignal>, Receiver<TaskSignal>) = mpsc::channel(); // setup channel for results
 
     let req = ProtoParcel::state_change(state);
 
@@ -23,7 +23,7 @@ pub fn push_state(neighbour_list: &Vec<SocketAddr>, state: Mode) {
     // end parallel scope
 }
 
-fn update(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<ThreadSignal>) {
+fn update(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<TaskSignal>) {
     info!("Pushing update to {}", host);
     let mut stream = match TcpStream::connect(host) {
         Ok(stream) => stream,

@@ -17,6 +17,7 @@ use crate::state::State;
 
 use log::{info, error, debug};
 use std::sync::mpsc::Sender;
+use crate::internal::TaskSignal;
 
 pub struct Client<'a> {
     identity: u64,
@@ -225,9 +226,19 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, wrk: Se
 
                     // Publish REQUEST
                     let state_ref = state_ref.read().unwrap();
-                    pub_req(&state_ref.get_neighbour_addrs(), req);
+                    let neighbours = &state_ref.get_neighbour_addrs();
                     drop(state_ref);
+                    let result  = pub_req(neighbours, req);
 
+                    match result {
+                        TaskSignal::Success => {
+                            info!("Resource REQUEST successful!");
+                            wrk.send(Pledge::Check);
+                        }
+                        _ =>{
+                            error!("Resource REQUEST failed!");
+                        }
+                    }
                     // ack client
                     ok(&mut stream);
 

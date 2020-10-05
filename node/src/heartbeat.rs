@@ -7,12 +7,12 @@ use rayon::prelude::*;
 use crate::net::{read_parcel, write_parcel};
 use clokwerk::{Scheduler, TimeUnits};
 use std::time::Duration;
-use crate::internal::ThreadSignal;
+use crate::internal::TaskSignal;
 use std::collections::{HashMap, HashSet};
 
 use log::{debug, error, info, warn};
 
-pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, timeout: u32, rx: Receiver<ThreadSignal>) {
+pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, timeout: u32, rx: Receiver<TaskSignal>) {
     let mut scheduler = Scheduler::new();
     // map node id to amount of timeouts
     let mut timeouts: HashMap<u16, u8> = HashMap::new();
@@ -71,7 +71,7 @@ pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, timeout: u32, rx: R
 
     for sig in rx.iter() {
         match sig {
-            ThreadSignal::StopProcess => {
+            TaskSignal::StopProcess => {
                 thread_handle.stop();
                 info!("Stopping heartbeat thread!");
                 return;

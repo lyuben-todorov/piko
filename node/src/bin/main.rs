@@ -23,7 +23,7 @@ use piko::net::listener_thread;
 use std::sync::{Arc, mpsc, RwLock, Mutex};
 use std::sync::mpsc::{Sender, Receiver};
 
-use piko::internal::ThreadSignal;
+use piko::internal::TaskSignal;
 use piko::proto::{ResourceRequest, Pledge, ResourceRelease};
 
 use fern::colors::{Color, ColoredLevelConfig};
@@ -176,7 +176,7 @@ fn main() {
 
     // Start heartbeat thread
     let state_ref = state.clone();
-    let (_monitor_sender, monitor_receiver): (Sender<ThreadSignal>, Receiver<ThreadSignal>) = mpsc::channel();
+    let (_monitor_sender, monitor_receiver): (Sender<TaskSignal>, Receiver<TaskSignal>) = mpsc::channel();
     rayon::spawn(move || heartbeat(state_ref, 5, 5, monitor_receiver));
 
 

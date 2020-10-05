@@ -9,6 +9,7 @@ use std::sync::mpsc::Receiver;
 use crate::proto::{Pledge, ResourceRequest, ResourceRelease};
 use std::collections::{BinaryHeap, HashMap};
 use crate::client::Client;
+use crate::req::publish::pub_rel;
 
 ///
 /// Tasked with maintaining protocol consistency
@@ -34,17 +35,19 @@ pub fn wrk(state: Arc<RwLock<State>>, pledge_queue: Arc<Mutex<BinaryHeap<Resourc
     drop(state_ref);
 
     for pledge in recv.iter() {
-        info!("Processing pledge");
         match pledge {
-            Pledge::Kuchek => {
+            Pledge::Check => {
+                info!("Checking resource queue");
                 let q_ref = pledge_queue.lock().unwrap();
                 let pledge = q_ref.peek().unwrap();
 
                 if pledge.owner == self_id {
                     info!("Consuming resource! node {} message {}", pledge.owner, String::from_utf8_lossy(&pledge.message_hash));
                     let mut messages = pending_messages.lock().unwrap();
-                    let _message = messages.entry(pledge.shorthand);
+                    let message = messages.remove(&pledge.shorthand).unwrap();
 
+                    let state = state.read().unwrap();
+                    pub_rel(&state.get_neighbour_addrs(), message);
 
                 }
             }

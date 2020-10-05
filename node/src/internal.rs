@@ -1,4 +1,4 @@
-pub enum ThreadSignal {
+pub enum TaskSignal {
     StopProcess,
     StartProcess,
     Success,

@@ -3,7 +3,7 @@
  */
 use std::net::{SocketAddr, TcpStream};
 use crate::state::Node;
-use crate::internal::ThreadSignal;
+use crate::internal::TaskSignal;
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::mpsc;
 use crate::proto::{ProtoParcel};
@@ -12,7 +12,7 @@ use crate::net::{write_parcel, read_parcel, is_acked};
 use log::{error, info};
 
 pub fn add_node(neighbour_list: &Vec<SocketAddr>, nodes: Vec<Node>) {
-    let (sender, receiver): (Sender<ThreadSignal>, Receiver<ThreadSignal>) = mpsc::channel(); // setup channel for results
+    let (sender, receiver): (Sender<TaskSignal>, Receiver<TaskSignal>) = mpsc::channel(); // setup channel for results
 
     let req = ProtoParcel::add_node(nodes);
 
@@ -24,14 +24,14 @@ pub fn add_node(neighbour_list: &Vec<SocketAddr>, nodes: Vec<Node>) {
 
     for result in receiver.iter(){
         match result {
-            ThreadSignal::Success => {}
-            ThreadSignal::Fail => {}
+            TaskSignal::Success => {}
+            TaskSignal::Fail => {}
             _ => {}
         }
     }
 }
 
-fn update(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<ThreadSignal>) {
+fn update(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<TaskSignal>) {
     info!("Pushing new neighbours to {}", host);
     let mut stream = match TcpStream::connect(host) {
         Ok(stream) => stream,
