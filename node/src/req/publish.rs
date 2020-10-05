@@ -45,7 +45,7 @@ fn publish_request(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<
         Ok(stream) => stream,
         Err(err) => {
             error!("{}: {}", err, host);
-            tx.send(TaskSignal::Fail);
+            tx.send(TaskSignal::Fail).unwrap();
             return;
         }
     };
@@ -57,7 +57,7 @@ fn publish_request(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<
         Ok(parcel) => parcel,
         Err(e) => {
             error!("Invalid parcel! {}", e);
-            tx.send(TaskSignal::Fail);
+            tx.send(TaskSignal::Fail).unwrap();
             return;
         }
     };
@@ -73,7 +73,7 @@ pub fn pub_rel(neighbour_list: &Vec<SocketAddr>, rel: ResourceRelease) {
 
     // begin parallel scope
     neighbour_list.into_par_iter().for_each_with(sender, |s, addr| {
-        publish_request(&addr, &req, s);
+        publish_release(&addr, &req, s);
     });
     // end parallel scope
 }

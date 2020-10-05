@@ -8,9 +8,6 @@ use byteorder::{ReadBytesExt, WriteBytesExt};
 use std::io::{Read, Write};
 use std::error::Error;
 
-use sha2::{Digest};
-
-
 use crate::proto::{ResourceRequest, ResourceRelease, Pledge};
 use crate::req::publish::pub_req;
 use crate::state::State;
@@ -235,7 +232,7 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, wrk: Se
                     match result {
                         TaskSignal::Success => {
                             info!("Resource REQUEST successful!");
-                            wrk.send(Pledge::Check);
+                            wrk.send(Pledge::Check).unwrap();
                         }
                         _ =>{
                             error!("Resource REQUEST failed!");

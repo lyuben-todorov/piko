@@ -5,7 +5,7 @@ use crate::state::{State, Node};
 
 use std::sync::{Arc, RwLock, Mutex};
 use std::io::{Read, Write};
-use crate::proto::{ProtoParcel, Type, Body, MessageWrapper, ResourceRequest, ResourceRelease, Pledge};
+use crate::proto::{ProtoParcel, Type, Body, ResourceRequest, Pledge};
 use byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
 use crate::internal::TaskSignal;
 use crate::req::add_node::add_node;

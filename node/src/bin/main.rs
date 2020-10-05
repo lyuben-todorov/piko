@@ -24,7 +24,7 @@ use std::sync::{Arc, mpsc, RwLock, Mutex};
 use std::sync::mpsc::{Sender, Receiver};
 
 use piko::internal::TaskSignal;
-use piko::proto::{ResourceRequest, Pledge, ResourceRelease};
+use piko::proto::{ResourceRequest, Pledge, ResourceRelease, get_proto_version};
 
 use fern::colors::{Color, ColoredLevelConfig};
 use log::{info};
@@ -32,7 +32,6 @@ use log::{info};
 use piko::heartbeat::heartbeat;
 use piko::client::{client_listener, Client};
 use piko::wrk::wrk;
-
 
 fn setup_logger() {
     let colors_line = ColoredLevelConfig::new()
@@ -119,6 +118,7 @@ fn main() {
     };
 
     rayon::ThreadPoolBuilder::new().num_threads(thread_count as usize).build_global().unwrap();
+    info!("Using Protocol Version {}", get_proto_version());
     info!("Setting worker pool count to {}.", thread_count);
 
     let cluster_socket = match TcpListener::bind(addr) {

@@ -18,16 +18,35 @@ use std::net::SocketAddr;
 use sha2::{Sha256, Digest};
 use std::convert::TryInto;
 use sha2::digest::DynDigest;
+
 lazy_static! {
-    pub static ref PROTO_VERSION: String = "1.0".to_string();
+    pub static ref PROTO_VERSION: String = "1.1".to_string();
     pub static ref SENDER: Mutex<u16> = Mutex::new(0);
 }
 
+pub fn get_proto_version() -> String{
+    return PROTO_VERSION.clone();
+}
 pub fn set_sender_id(id: u16) {
     let mut _id = SENDER.lock().unwrap();
     *_id = id;
 }
 
+fn calculate_hash(message: &Vec<u8>, timestamp: &DateTime<Utc>) -> ([u8;32], u16) {
+    let mut hasher = Sha256::new();
+
+    DynDigest::update(&mut hasher, &message.as_slice());
+    DynDigest::update(&mut hasher, &timestamp.nanosecond().to_be_bytes());
+
+    let message_hash: [u8; 32] = hasher.finalize().into();
+
+    let shorthand = message_hash.chunks(2).into_iter().map(|x: &[u8]| {
+        let chunk: u16 = u16::from_be_bytes(x.try_into().unwrap());
+        chunk
+    }).fold(0, |x: u16, y: u16| { x ^ y });
+
+    return (message_hash, shorthand);
+}
 // Enumeration over the types of protocol messages
 #[derive(FromPrimitive, ToPrimitive, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Type {
@@ -175,20 +194,11 @@ pub struct ResourceRelease {
 
 impl ResourceRequest {
     pub fn generate(message: Vec<u8>) -> (ResourceRequest, ResourceRelease) {
-        let mut hasher = Sha256::new();
 
         let timestamp = Utc::now();
 
-        let _time_hash = timestamp.nanosecond();
-        DynDigest::update(&mut hasher, message.as_slice());
-        DynDigest::update(&mut hasher, &timestamp.nanosecond().to_be_bytes());
+        let (message_hash, shorthand) = calculate_hash(&message, &timestamp);
 
-        let message_hash: [u8; 32] = hasher.finalize().into();
-
-        let shorthand = message_hash.chunks(2).into_iter().map(|x: &[u8]| {
-            let chunk: u16 = u16::from_be_bytes(x.try_into().unwrap());
-            chunk
-        }).fold(0, |x: u16, y: u16| { x ^ y });
         let id =  *crate::proto::SENDER.lock().unwrap();
         (
             ResourceRequest {
