@@ -15,6 +15,9 @@ use crate::state::State;
 use log::{info, error, debug};
 use std::sync::mpsc::Sender;
 use crate::internal::TaskSignal;
+use chrono::{Utc, DateTime};
+use crate::semaphore::OrdSemaphore;
+use std::borrow::Borrow;
 
 pub struct Client<'a> {
     identity: u64,
@@ -123,10 +126,9 @@ fn err(stream: &mut TcpStream, message: &str) {
 }
 
 pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, wrk: Sender<Pledge>,
-                       pledge_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>>, _f_access: Arc<Mutex<bool>>,
+                       pledge_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>>, semaphore: Arc<OrdSemaphore<DateTime<Utc>>>,
                        client_list: Arc<RwLock<HashMap<u64, RwLock<Client<'static>>>>>,
                        pending_messages: Arc<Mutex<HashMap<u16, ResourceRelease>>>) {
-
     for stream in listener.incoming() {
         let mut stream = stream.unwrap();
 
@@ -135,6 +137,8 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, wrk: Se
         let pledge_queue = Arc::clone(&pledge_queue);
         let pending_messages = pending_messages.clone();
         let wrk = wrk.clone();
+        let semaphore = semaphore.clone();
+
         rayon::spawn(move || {
             // debug!("Received message from client!");
             let req = match read_req(&mut stream) {
@@ -203,9 +207,9 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, wrk: Se
                 ClientReq::Publish { client_id, message } => {
                     info!("Publishing message from client {} with size {}", client_id, message.len());
 
-
                     let (req, rel) = ResourceRequest::generate(message);
 
+                    let client = semaphore.create_task(req.timestamp);
 
                     // Place REQUEST on local queue
                     let mut pledge_queue = pledge_queue.lock().unwrap();
@@ -215,7 +219,7 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, wrk: Se
                     // Place eventual RELEASE on KV store
                     debug!("Inserting {}", rel.shorthand);
                     let mut messages = pending_messages.lock().unwrap();
-                    messages.insert(rel.shorthand,rel);
+                    messages.insert(rel.shorthand, rel);
                     drop(messages);
                     debug!("Inserted!");
 
@@ -223,20 +227,20 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, wrk: Se
                     let state_ref = state_ref.read().unwrap();
                     let neighbours = &state_ref.get_neighbour_addrs();
                     drop(state_ref);
-                    let result  = pub_req(neighbours, req);
+                    let result = pub_req(neighbours, req);
 
                     match result {
                         TaskSignal::Success => {
                             info!("Resource REQUEST successful!");
+                            client.consume();
                             wrk.send(Pledge::Check).unwrap();
                         }
-                        _ =>{
+                        _ => {
                             error!("Resource REQUEST failed!");
                         }
                     }
                     // ack client
                     ok(&mut stream);
-
                 }
             }
         })

@@ -15,6 +15,7 @@ use std::collections::{BinaryHeap};
 use std::error::Error;
 use std::sync::mpsc::Sender;
 use chrono::{DateTime, Utc};
+use crate::semaphore::OrdSemaphore;
 
 
 pub fn read_parcel(stream: &mut TcpStream) -> Result<ProtoParcel, Box<dyn Error>> {
@@ -64,16 +65,16 @@ pub fn is_acked(response: ProtoParcel, ack_id: u64) -> TaskSignal {
 }
 
 pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, pledge_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>>,
-                       f_access: Arc<Mutex<bool>>, wrk: Sender<Pledge>) {
+                       semaphore: Arc<OrdSemaphore<DateTime<Utc>>>, wrk: Sender<Pledge>) {
     info!("Started Listener thread!");
 
     for stream in socket.incoming() {
         let mut stream = stream.unwrap();
 
         let state_ref = Arc::clone(&state);
-        let f_access = Arc::clone(&f_access);
         let pledge_queue = Arc::clone(&pledge_queue);
         let wrk = wrk.clone();
+        let semaphore = semaphore.clone();
 
         rayon::spawn(move || {
             let parcel = match read_parcel(&mut stream) {
@@ -162,22 +163,15 @@ pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, pledge_qu
                     if let Body::ResourceRequest { resource_request } = parcel.body {
                         info!("Processing Resource Request with id {} from node {}", parcel.id, parcel.sender_id);
 
-                        let lock = f_access.lock().unwrap();
 
-                        // if resource_request.timestamp.gt(&lock) {
-                            let mut pledge_queue = pledge_queue.lock().unwrap();
-                            pledge_queue.push(resource_request);
-                            drop(pledge_queue);
+                        semaphore.wait_until(&resource_request.timestamp);
 
-                            let ack = ProtoParcel::ack(parcel.id);
-                            write_parcel(&mut stream, &ack);
-                        // } else {
-                            /*
-                            This is entered when the current node has outstanding (concurrent)
-                             ResourceRequest(s!) that are yet to be acknowledged by the whole cluster.
-                            */
+                        let mut pledge_queue = pledge_queue.lock().unwrap();
+                        pledge_queue.push(resource_request);
+                        drop(pledge_queue);
 
-                        // }
+                        let ack = ProtoParcel::ack(parcel.id);
+                        write_parcel(&mut stream, &ack);
                     }
                 }
                 Type::ResourceRelease => {

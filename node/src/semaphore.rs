@@ -84,6 +84,9 @@ impl Client {
     pub fn new(tx: Sender<()>) -> Client {
         Client { channel: tx }
     }
+    pub fn consume(&self) {
+        self.channel.send(());
+    }
 }
 
 ///

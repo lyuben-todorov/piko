@@ -33,6 +33,8 @@ use log::{info};
 use piko::heartbeat::heartbeat;
 use piko::client::{client_listener, Client};
 use piko::wrk::wrk;
+use piko::semaphore::OrdSemaphore;
+use chrono::{DateTime, Utc};
 
 fn setup_logger() {
     let colors_line = ColoredLevelConfig::new()
@@ -146,13 +148,13 @@ fn main() {
     let state = Arc::new(RwLock::new(State::new(Mode::Dsc, name, addr, external_addr, neighbours)));
     let client_list: Arc<RwLock<HashMap<u64, RwLock<Client>>>> = Arc::new(RwLock::new(HashMap::<u64, RwLock<Client>>::new()));
     let pledge_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>> = Arc::new(Mutex::new(BinaryHeap::new()));
-    let f_lock: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
+    let semaphore: Arc<OrdSemaphore<DateTime<Utc>>> = Arc::new(OrdSemaphore::new());
     let pending_messages: Arc<Mutex<HashMap<u16, ResourceRelease>>>= Arc::new(Mutex::new(HashMap::new()));
 
     // Start network listener thread
     let state_ref = state.clone();
     let pledge_queue_ref = pledge_queue.clone();
-    let f_lock_ref = f_lock.clone();
+    let semaphore_ref = semaphore.clone();
     let pledge_sender_ref = pledge_sender.clone();
     let pending_messages_ref = pending_messages.clone();
 
@@ -160,14 +162,14 @@ fn main() {
         cluster_socket,
         state_ref,
         pledge_queue_ref,
-        f_lock_ref,
+        semaphore_ref,
         pledge_sender_ref
     ));
 
     // Start client listener thread
     let state_ref = state.clone();
     let pledge_queue_ref = pledge_queue.clone();
-    let f_lock_ref = f_lock.clone();
+    let semaphore_ref = semaphore.clone();
     let client_list_ref = client_list.clone();
     let pledge_sender_ref = pledge_sender.clone();
     rayon::spawn(move || client_listener(
@@ -175,7 +177,7 @@ fn main() {
         state_ref,
         pledge_sender_ref,
         pledge_queue_ref,
-        f_lock_ref,
+        semaphore_ref,
         client_list_ref,
         pending_messages_ref
     ));
