@@ -65,7 +65,7 @@ impl<T: Ord> OrdSemaphore<T> {
 }
 
 fn create_pair<T: Ord>(event: T) -> (Client, Waiter<T>) {
-    let (tx, rx): (Sender<()>, Receiver<()>) = bounded(0);
+    let (tx, rx): (Sender<()>, Receiver<()>) = bounded(1);
 
     let client = Client::new(tx);
     let waiter = Waiter::new(event, rx);
