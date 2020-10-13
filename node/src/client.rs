@@ -18,6 +18,7 @@ use crate::internal::TaskSignal;
 use chrono::{Utc, DateTime};
 use crate::semaphore::OrdSemaphore;
 use std::borrow::Borrow;
+use std::time::Duration;
 
 pub struct Client<'a> {
     identity: u64,
@@ -222,6 +223,9 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, wrk: Se
                     messages.insert(rel.shorthand, rel);
                     drop(messages);
                     debug!("Inserted!");
+
+                    debug!("Sleeping to simulate concurrent request!");
+                    std::thread::sleep(Duration::from_secs(5));
 
                     // Publish REQUEST
                     let state_ref = state_ref.read().unwrap();

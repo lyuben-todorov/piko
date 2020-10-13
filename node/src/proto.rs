@@ -20,6 +20,7 @@ use std::convert::TryInto;
 use sha2::digest::DynDigest;
 
 lazy_static! {
+    // WIP :/
     pub static ref PROTO_VERSION: String = "1.1".to_string();
     pub static ref SENDER: Mutex<u16> = Mutex::new(0);
 }
