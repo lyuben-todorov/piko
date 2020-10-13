@@ -4,9 +4,7 @@ use crate::net::{write_parcel, read_parcel};
 
 use log::{error};
 
-///
-/// Returns the route through which the sender is contacted
-///
+// Returns the route through which the sender is contacted
 pub fn get_ext_addr_from_neighbour(host: &SocketAddr) -> Option<SocketAddr> {
     let req = ProtoParcel::ext_addr_req();
 

@@ -6,6 +6,7 @@ extern crate num_derive;
 extern crate lazy_static;
 extern crate log;
 extern crate fern;
+extern crate crossbeam_channel;
 
 use config::*;
 
@@ -155,8 +156,13 @@ fn main() {
     let pledge_sender_ref = pledge_sender.clone();
     let pending_messages_ref = pending_messages.clone();
 
-    rayon::spawn(move || listener_thread(cluster_socket, state_ref, pledge_queue_ref,
-                                         f_lock_ref, pledge_sender_ref));
+    rayon::spawn(move || listener_thread(
+        cluster_socket,
+        state_ref,
+        pledge_queue_ref,
+        f_lock_ref,
+        pledge_sender_ref
+    ));
 
     // Start client listener thread
     let state_ref = state.clone();
@@ -177,7 +183,12 @@ fn main() {
     // Start heartbeat thread
     let state_ref = state.clone();
     let (_monitor_sender, monitor_receiver): (Sender<TaskSignal>, Receiver<TaskSignal>) = mpsc::channel();
-    rayon::spawn(move || heartbeat(state_ref, 5, 5, monitor_receiver));
+    rayon::spawn(move || heartbeat(
+        state_ref,
+        5,
+        5,
+        monitor_receiver
+    ));
 
 
     info!("Started main worker thread!");

@@ -11,9 +11,7 @@ use std::collections::{BinaryHeap, HashMap};
 use crate::client::Client;
 use crate::req::publish::pub_rel;
 
-///
-/// Tasked with maintaining protocol consistency
-///
+// Tasked with maintaining protocol consistency
 pub fn wrk(state: Arc<RwLock<State>>, pledge_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>>,
            recv: &Receiver<Pledge>, _client_list: Arc<RwLock<HashMap<u64, RwLock<Client>>>>,
            pending_messages: Arc<Mutex<HashMap<u16, ResourceRelease>>>) {

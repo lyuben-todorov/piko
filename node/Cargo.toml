@@ -24,3 +24,4 @@ log = "0.4.11"
 fern = { version = "0.6.0", features = ["colored"] }
 chrono = { version = "0.4.15", features = ["serde"] }
 enum_dispatch = "0.3.3"
+crossbeam-channel = "0.5"

@@ -86,9 +86,7 @@ impl ClientReq {
     }
 }
 
-///
-/// Read Request from client
-///
+// Read Request from client
 fn read_req(stream: &mut TcpStream) -> Result<ClientReq, Box<dyn Error>> {
     let count = stream.read_u8()?;
 
@@ -103,9 +101,7 @@ fn read_req(stream: &mut TcpStream) -> Result<ClientReq, Box<dyn Error>> {
     Ok(client_req)
 }
 
-///
-/// Write Response to client
-///
+// Write Response to client
 fn write_res(stream: &mut TcpStream, res: ClientRes) {
     let buf = serde_cbor::to_vec(&res).unwrap();
 

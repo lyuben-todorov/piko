@@ -14,6 +14,7 @@ use log::{error, info, warn};
 use std::collections::{BinaryHeap};
 use std::error::Error;
 use std::sync::mpsc::Sender;
+use chrono::{DateTime, Utc};
 
 
 pub fn read_parcel(stream: &mut TcpStream) -> Result<ProtoParcel, Box<dyn Error>> {
@@ -163,14 +164,20 @@ pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, pledge_qu
 
                         let lock = f_access.lock().unwrap();
 
-                        let mut pledge_queue = pledge_queue.lock().unwrap();
-                        pledge_queue.push(resource_request);
-                        drop(pledge_queue);
+                        // if resource_request.timestamp.gt(&lock) {
+                            let mut pledge_queue = pledge_queue.lock().unwrap();
+                            pledge_queue.push(resource_request);
+                            drop(pledge_queue);
 
-                        let ack = ProtoParcel::ack(parcel.id);
-                        write_parcel(&mut stream, &ack);
-                        drop(lock);
+                            let ack = ProtoParcel::ack(parcel.id);
+                            write_parcel(&mut stream, &ack);
+                        // } else {
+                            /*
+                            This is entered when the current node has outstanding (concurrent)
+                             ResourceRequest(s!) that are yet to be acknowledged by the whole cluster.
+                            */
 
+                        // }
                     }
                 }
                 Type::ResourceRelease => {

@@ -1,3 +1,5 @@
+#![feature(binary_heap_retain)]
+
 mod tests;
 pub mod msg;
 pub mod proto;
@@ -9,3 +11,4 @@ pub mod heartbeat;
 pub mod internal;
 pub mod req;
 pub mod client;
+pub mod semaphore;

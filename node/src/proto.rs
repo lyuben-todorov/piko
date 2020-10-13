@@ -67,12 +67,11 @@ pub enum Type {
     ResourceRelease = 9,
 
     Ack = 10,
-    Publish = 11,
 
-    AddNode = 12,
+    AddNode = 11,
 
-    ExtAddrReq = 13,
-    ExtAddrRes = 14,
+    ExtAddrReq = 12,
+    ExtAddrRes = 13,
 }
 
 impl Display for Type {
@@ -93,8 +92,6 @@ impl Display for Type {
 
             Type::ExtAddrRes => write!(f, "{}", "ExtAddrRes"),
             Type::ExtAddrReq => write!(f, "{}", "ExtAddrReq"),
-
-            Type::Publish => write!(f, "{}", "Publish"),
         }
     }
 }
