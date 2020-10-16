@@ -66,9 +66,8 @@ impl State {
             id: self.id,
             mode: self.mode.clone(),
             name: self.name.clone(),
-
             // Intended panic. If an external node is requesting self state,
-            // external address should known.
+            // external address should be known.
             external_addr: self.external_addr.clone().unwrap(),
         }
     }

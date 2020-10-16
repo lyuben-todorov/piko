@@ -228,9 +228,12 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, wrk: Se
                     std::thread::sleep(Duration::from_secs(5));
 
                     // Publish REQUEST
+                    debug!(" state lock");
                     let state_ref = state_ref.read().unwrap();
                     let neighbours = &state_ref.get_neighbour_addrs();
                     drop(state_ref);
+
+                    println!("publish");
                     let result = pub_req(neighbours, req);
 
                     match result {

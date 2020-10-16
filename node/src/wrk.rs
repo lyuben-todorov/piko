@@ -57,10 +57,8 @@ pub fn wrk(state: Arc<RwLock<State>>, pledge_queue: Arc<Mutex<BinaryHeap<Resourc
                 if pledge.owner == rel.owner {
                     let pledge = q_ref.pop().unwrap();
                     info!("Neighbour exited CS! node {} message {}", pledge.owner, String::from_utf8(rel.message.message).unwrap());
-
                 }
             }
         }
     }
 }
-

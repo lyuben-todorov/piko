@@ -10,7 +10,7 @@ use byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
 use crate::internal::TaskSignal;
 use crate::req::add_node::add_node;
 
-use log::{error, info, warn};
+use log::{error, info, warn, debug};
 use std::collections::{BinaryHeap};
 use std::error::Error;
 use std::sync::mpsc::Sender;
@@ -162,7 +162,6 @@ pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, pledge_qu
                 Type::ResourceRequest => {
                     if let Body::ResourceRequest { resource_request } = parcel.body {
                         info!("Processing Resource Request with id {} from node {}", parcel.id, parcel.sender_id);
-
 
                         semaphore.wait_until(&resource_request.timestamp);
 

@@ -53,6 +53,7 @@ fn publish_request(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<
     let m_id = req_parcel.id;
     write_parcel(&mut stream, &req_parcel);
 
+    debug!("waiting for response");
     let res_parcel = match read_parcel(&mut stream) {
         Ok(parcel) => parcel,
         Err(e) => {

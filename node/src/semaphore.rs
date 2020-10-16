@@ -29,7 +29,6 @@ impl<T: Ord> OrdSemaphore<T> {
     pub fn wait_until(&self, event: &T) {
         loop {
             let queue = self.events.read().unwrap();
-
             match queue.peek() {
                 None => {
                     // explicit return, queue is empty
