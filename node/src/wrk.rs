@@ -4,7 +4,7 @@ use std::sync::{RwLock, Arc, Mutex};
 
 use crate::req::{push_state::push_state, seq_recovery::seq_recovery};
 
-use log::{info, debug};
+use log::{info, debug, error};
 use std::sync::mpsc::{Receiver, TryRecvError};
 use crate::proto::{Pledge, ResourceRequest, ResourceRelease};
 use std::collections::{BinaryHeap, HashMap, VecDeque};
@@ -70,15 +70,18 @@ pub fn wrk(state: Arc<RwLock<State>>, resource_queue: Arc<Mutex<BinaryHeap<Resou
             let mut releases: usize = 0;
             let mut q_lock = q_ref.lock().unwrap();
             let req = q_lock.peek().unwrap();
-            let owner = req.shorthand;
+            let owner = req.owner;
             drop(q_lock);
             for rel in recv.try_iter() {
                 releases += 1;
+                debug!("{} {}" ,owner, rel.owner);
                 if owner == rel.owner {
                     let mut q_lock = q_ref.lock().unwrap();
                     let pledge = q_lock.pop().unwrap();
                     info!("Neighbour exited CS! node {} message {}", pledge.owner, String::from_utf8(rel.message.message).unwrap());
                     drop(q_lock);
+                } else {
+                    error!("Neighbour tried entering CS without lock!");
                 }
             }
             if releases == 0 {
@@ -89,14 +92,19 @@ pub fn wrk(state: Arc<RwLock<State>>, resource_queue: Arc<Mutex<BinaryHeap<Resou
     }
 }
 
-fn is_acknowledged(map: Arc<Mutex<HashMap<u16, (ResourceRelease, bool)>>>, req_key: u16) -> bool {
+fn is_acknowledged(map: Arc<Mutex<HashMap<u16, (ResourceRelease, bool)>>>, rel_key: u16) -> bool {
     const TRYOUTS: u8 = 3;
     let mut response = false;
 
     // try a few times
     for i in 0..TRYOUTS {
         let map = map.lock().unwrap();
-        response = map.get(&req_key).unwrap().1;
+        response = match map.get(&rel_key) {
+            Some(rel) => {rel.1},
+            _ => {
+                false
+            }
+        };
         drop(map);
         if !response { std::thread::sleep(Duration::from_millis(10)); }
     }
