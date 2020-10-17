@@ -126,7 +126,7 @@ fn err(stream: &mut TcpStream, message: &str) {
     write_res(stream, ClientRes::Error { message: message.to_string() });
 }
 
-pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, wrk: Sender<Pledge>,
+pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, wrk: Sender<ResourceRelease>,
                        pledge_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>>, semaphore: Arc<OrdSemaphore<DateTime<Utc>>>,
                        client_list: Arc<RwLock<HashMap<u64, RwLock<Client<'static>>>>>,
                        pending_messages: Arc<Mutex<HashMap<u16, ResourceRelease>>>) {
@@ -207,7 +207,6 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, wrk: Se
                 ClientReq::LongPoll { client_id: _ } => {}
                 ClientReq::Publish { client_id, message } => {
                     info!("Publishing message from client {} with size {}", client_id, message.len());
-
                     let (req, rel) = ResourceRequest::generate(message);
 
                     let client = semaphore.create_task(req.timestamp);
@@ -218,29 +217,25 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, wrk: Se
                     drop(pledge_queue);
 
                     // Place eventual RELEASE on KV store
-                    debug!("Inserting {}", rel.shorthand);
                     let mut messages = pending_messages.lock().unwrap();
                     messages.insert(rel.shorthand, rel);
                     drop(messages);
-                    debug!("Inserted!");
 
-                    debug!("Sleeping to simulate concurrent request!");
-                    std::thread::sleep(Duration::from_secs(5));
+                    // debug!("Sleeping to simulate concurrent request!");
+                    // std::thread::sleep(Duration::from_secs(5));
 
                     // Publish REQUEST
-                    debug!(" state lock");
                     let state_ref = state_ref.read().unwrap();
                     let neighbours = &state_ref.get_neighbour_addrs();
                     drop(state_ref);
 
-                    println!("publish");
                     let result = pub_req(neighbours, req);
 
                     match result {
                         TaskSignal::Success => {
                             info!("Resource REQUEST successful!");
                             client.consume();
-                            wrk.send(Pledge::Check).unwrap();
+                            // acked
                         }
                         _ => {
                             error!("Resource REQUEST failed!");

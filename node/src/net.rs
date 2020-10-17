@@ -5,7 +5,7 @@ use crate::state::{State, Node};
 
 use std::sync::{Arc, RwLock, Mutex};
 use std::io::{Read, Write};
-use crate::proto::{ProtoParcel, Type, Body, ResourceRequest, Pledge};
+use crate::proto::{ProtoParcel, Type, Body, ResourceRequest, Pledge, ResourceRelease};
 use byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
 use crate::internal::TaskSignal;
 use crate::req::add_node::add_node;
@@ -65,7 +65,7 @@ pub fn is_acked(response: ProtoParcel, ack_id: u64) -> TaskSignal {
 }
 
 pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, pledge_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>>,
-                       semaphore: Arc<OrdSemaphore<DateTime<Utc>>>, wrk: Sender<Pledge>) {
+                       semaphore: Arc<OrdSemaphore<DateTime<Utc>>>, wrk: Sender<ResourceRelease>) {
     info!("Started Listener thread!");
 
     for stream in socket.incoming() {
@@ -180,7 +180,7 @@ pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, pledge_qu
                         let pledge_queue = pledge_queue.lock().unwrap();
 
                         if pledge_queue.peek().unwrap().message_hash == resource_release.message_hash {
-                            wrk.send(Pledge::ResourceRelease(resource_release)).unwrap();
+                            wrk.send(resource_release).unwrap();
                             let parcel = ProtoParcel::ack(parcel.id);
                             write_parcel(&mut stream, &parcel);
                         } else {

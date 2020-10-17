@@ -224,7 +224,7 @@ impl ResourceRequest {
 }
 
 pub enum Pledge {
-    Check,
+    Ack(u16),
     ResourceRelease(ResourceRelease),
 }
 

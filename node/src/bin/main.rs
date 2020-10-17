@@ -142,7 +142,7 @@ fn main() {
 
     let neighbours = HashMap::<u16, Node>::new();
 
-    let (pledge_sender, work_receiver): (Sender<Pledge>, Receiver<Pledge>) = mpsc::channel();
+    let (pledge_sender, work_receiver): (Sender<ResourceRelease>, Receiver<ResourceRelease>) = mpsc::channel();
 
     // Initiate state & shared data structures
     let state = Arc::new(RwLock::new(State::new(Mode::Dsc, name, addr, external_addr, neighbours)));
