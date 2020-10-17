@@ -126,18 +126,17 @@ fn err(stream: &mut TcpStream, message: &str) {
     write_res(stream, ClientRes::Error { message: message.to_string() });
 }
 
-pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, wrk: Sender<ResourceRelease>,
-                       pledge_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>>, semaphore: Arc<OrdSemaphore<DateTime<Utc>>>,
-                       client_list: Arc<RwLock<HashMap<u64, RwLock<Client<'static>>>>>,
-                       pending_messages: Arc<Mutex<HashMap<u16, ResourceRelease>>>) {
+pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, // Node state & listener
+                       resource_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>>, // Resource queue
+                       semaphore: Arc<OrdSemaphore<DateTime<Utc>>>, // Total order slemaphore
+                       pending_messages: Arc<Mutex<HashMap<u16, (ResourceRelease, bool)>>>) {
     for stream in listener.incoming() {
         let mut stream = stream.unwrap();
 
-        let client_list = client_list.clone();
+        let client_list: Arc<RwLock<HashMap<u64, RwLock<Client>>>> = Arc::new(RwLock::new(HashMap::<u64, RwLock<Client>>::new()));
         let state_ref = state.clone();
-        let pledge_queue = Arc::clone(&pledge_queue);
+        let pledge_queue = Arc::clone(&resource_queue);
         let pending_messages = pending_messages.clone();
-        let wrk = wrk.clone();
         let semaphore = semaphore.clone();
 
         rayon::spawn(move || {
@@ -158,7 +157,8 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, wrk: Se
                         message_queue: VecDeque::<&Vec<u8>>::new(),
                     };
 
-                    let write = client_list.write().unwrap().insert(client_id, RwLock::from(client));
+                    let mut client_list =client_list.write().unwrap();
+                    let write = client_list.insert(client_id, RwLock::from(client));
                     match write {
                         None => ok(&mut stream),
                         Some(_) => ok_with_message(&mut stream, "Client exists, flushed queue")
@@ -208,17 +208,20 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, wrk: Se
                 ClientReq::Publish { client_id, message } => {
                     info!("Publishing message from client {} with size {}", client_id, message.len());
                     let (req, rel) = ResourceRequest::generate(message);
+                    let key = rel.shorthand;
 
                     let client = semaphore.create_task(req.timestamp);
 
                     // Place REQUEST on local queue
+                    debug!("2 lock");
                     let mut pledge_queue = pledge_queue.lock().unwrap();
                     pledge_queue.push(req);
                     drop(pledge_queue);
+                    debug!("2 rel");
 
                     // Place eventual RELEASE on KV store
                     let mut messages = pending_messages.lock().unwrap();
-                    messages.insert(rel.shorthand, rel);
+                    messages.insert(key, (rel, false));
                     drop(messages);
 
                     // debug!("Sleeping to simulate concurrent request!");
@@ -233,9 +236,10 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, wrk: Se
 
                     match result {
                         TaskSignal::Success => {
-                            info!("Resource REQUEST successful!");
                             client.consume();
-                            // acked
+                            let mut messages = pending_messages.lock().unwrap();
+                            messages.entry(key).and_modify(|x|x.1 = true);
+                            info!("Resource REQUEST acknowledged!");
                         }
                         _ => {
                             error!("Resource REQUEST failed!");

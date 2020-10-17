@@ -120,9 +120,7 @@ fn main() {
         Err(_e) => { None }
     };
 
-    rayon::ThreadPoolBuilder::new().num_threads(thread_count as usize).build_global().unwrap();
     info!("Using Protocol Version {}", get_proto_version());
-    info!("Setting worker pool count to {}.", thread_count);
 
     let cluster_socket = match TcpListener::bind(addr) {
         Ok(listener) => {
@@ -146,10 +144,9 @@ fn main() {
 
     // Initiate state & shared data structures
     let state = Arc::new(RwLock::new(State::new(Mode::Dsc, name, addr, external_addr, neighbours)));
-    let client_list: Arc<RwLock<HashMap<u64, RwLock<Client>>>> = Arc::new(RwLock::new(HashMap::<u64, RwLock<Client>>::new()));
     let pledge_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>> = Arc::new(Mutex::new(BinaryHeap::new()));
     let semaphore: Arc<OrdSemaphore<DateTime<Utc>>> = Arc::new(OrdSemaphore::new());
-    let pending_messages: Arc<Mutex<HashMap<u16, ResourceRelease>>>= Arc::new(Mutex::new(HashMap::new()));
+    let pending_messages: Arc<Mutex<HashMap<u16, (ResourceRelease, bool)>>>= Arc::new(Mutex::new(HashMap::new()));
 
     // Start network listener thread
     let state_ref = state.clone();
@@ -170,15 +167,12 @@ fn main() {
     let state_ref = state.clone();
     let pledge_queue_ref = pledge_queue.clone();
     let semaphore_ref = semaphore.clone();
-    let client_list_ref = client_list.clone();
     let pledge_sender_ref = pledge_sender.clone();
     rayon::spawn(move || client_listener(
         client_socket,
         state_ref,
-        pledge_sender_ref,
         pledge_queue_ref,
         semaphore_ref,
-        client_list_ref,
         pending_messages_ref
     ));
 
@@ -205,8 +199,8 @@ fn main() {
             }
             Mode::Wrk => {
                 drop(state_lock);
-                wrk(state.clone(), pledge_queue.clone(), &work_receiver,
-                    client_list.clone(), pending_messages.clone());
+                wrk(state.clone(), pledge_queue.clone(),
+                    &work_receiver,pending_messages.clone());
             }
             Mode::Err => {}
             Mode::Panic => {}
