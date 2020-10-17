@@ -91,10 +91,8 @@ pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, resource_
                         info!("Received DscReq with id {} from node {}", parcel.id, parcel.sender_id);
 
                         let mut neighbours = vec![];
-
                         let mut state_ref = state_ref.write().unwrap(); // acquire write lock
                         let state_neighbours: Vec<Node> = state_ref.neighbours.values().cloned().collect();
-
                         let self_node = state_ref.get_node_information();
 
                         // Push found node to neighbours

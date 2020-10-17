@@ -13,6 +13,8 @@ use crate::req::publish::pub_rel;
 use std::time::Duration;
 use rand::thread_rng;
 
+static SLEEP_TIME_MILLIS: u64 = 10;
+
 // Tasked with maintaining protocol consistency
 pub fn wrk(state: Arc<RwLock<State>>, resource_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>>,
            recv: &Receiver<ResourceRelease>, pending_messages: Arc<Mutex<HashMap<u16, (ResourceRelease, bool)>>>) {
@@ -31,67 +33,71 @@ pub fn wrk(state: Arc<RwLock<State>>, resource_queue: Arc<Mutex<BinaryHeap<Resou
     push_state(&neighbours, Mode::Wrk);
     info!("Starting from sequence number: {}", seq_num);
     // release state lock
-    // drop(state_ref);
+    drop(state_ref);
 
 
     loop {
         let q_ref = &resource_queue.clone();
-        debug!("Main lock");
-        let mut q_ref = q_ref.lock().unwrap();
-        let req = match q_ref.peek() {
+        let mut q_lock = q_ref.lock().unwrap();
+        let (req_owner, req_key) = match q_lock.peek() {
             None => {
                 // Queue was empty
-                drop(q_ref);
-                // println!("asd");
-                std::thread::sleep(Duration::from_millis(500));
-                debug!("Main rel");
+                drop(q_lock);
+                std::thread::sleep(Duration::from_millis(SLEEP_TIME_MILLIS));
                 continue;
             }
             Some(req) => {
-                req
+                (req.owner, req.shorthand)
             }
         };
-        debug!("Current req: {} Me: {}", req.owner, self_id);
-        if req.owner == self_id && is_acknowledged(pending_messages.clone(), req) {
+        // debug!("Current req: {} Me: {}", req.owner, self_id);
+        drop(q_lock);
+        if req_owner == self_id && is_acknowledged(pending_messages.clone(), req_key) {
             // begin executing CS
-            let resource = q_ref.pop().unwrap();
+            let mut q_lock = q_ref.lock().unwrap();
+            let resource = q_lock.pop().unwrap();
             info!("Entering CS! node {} message {}", resource.owner, resource.shorthand);
             let mut messages = pending_messages.lock().unwrap();
             let message = messages.remove(&resource.shorthand).unwrap();
+
+            // drop before slow ops
+            drop(q_lock);
             let state = state.read().unwrap();
+
             pub_rel(&state.get_neighbour_addrs(), message.0);
         } else {
             // gather resource releases
-            println!("Gathering resource releases");
             let mut releases: usize = 0;
+            let mut q_lock = q_ref.lock().unwrap();
+            let req = q_lock.peek().unwrap();
+            let owner = req.shorthand;
+            drop(q_lock);
             for rel in recv.try_iter() {
                 releases += 1;
-                let req = q_ref.peek().unwrap();
-                if req.owner == rel.owner {
-                    let pledge = q_ref.pop().unwrap();
+                if owner == rel.owner {
+                    let mut q_lock = q_ref.lock().unwrap();
+                    let pledge = q_lock.pop().unwrap();
                     info!("Neighbour exited CS! node {} message {}", pledge.owner, String::from_utf8(rel.message.message).unwrap());
+                    drop(q_lock);
                 }
             }
             if releases == 0 {
-                std::thread::sleep(Duration::from_millis(450));
+                std::thread::sleep(Duration::from_millis(SLEEP_TIME_MILLIS));
             }
         }
-
-        drop(q_ref);
-        debug!("Main rel");
-        std::thread::sleep(Duration::from_millis(500));
 
     }
 }
 
-fn is_acknowledged(map: Arc<Mutex<HashMap<u16, (ResourceRelease, bool)>>>, req: &ResourceRequest) -> bool {
+fn is_acknowledged(map: Arc<Mutex<HashMap<u16, (ResourceRelease, bool)>>>, req_key: u16) -> bool {
     const TRYOUTS: u8 = 3;
     let mut response = false;
 
     // try a few times
     for i in 0..TRYOUTS {
         let map = map.lock().unwrap();
-        response = map.get(&req.shorthand).unwrap().1;
+        response = map.get(&req_key).unwrap().1;
+        drop(map);
         if !response { std::thread::sleep(Duration::from_millis(10)); }
     }
     response
