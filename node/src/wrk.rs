@@ -74,7 +74,7 @@ pub fn wrk(state: Arc<RwLock<State>>, resource_queue: Arc<Mutex<BinaryHeap<Resou
             drop(q_lock);
             for rel in recv.try_iter() {
                 releases += 1;
-                debug!("{} {}" ,owner, rel.owner);
+                debug!("{} {}", owner, rel.owner);
                 if owner == rel.owner {
                     let mut q_lock = q_ref.lock().unwrap();
                     let pledge = q_lock.pop().unwrap();
@@ -88,7 +88,6 @@ pub fn wrk(state: Arc<RwLock<State>>, resource_queue: Arc<Mutex<BinaryHeap<Resou
                 std::thread::sleep(Duration::from_millis(SLEEP_TIME_MILLIS));
             }
         }
-
     }
 }
 
@@ -100,7 +99,7 @@ fn is_acknowledged(map: Arc<Mutex<HashMap<u16, (ResourceRelease, bool)>>>, rel_k
     for _i in 0..TRYOUTS {
         let map = map.lock().unwrap();
         response = match map.get(&rel_key) {
-            Some(rel) => {rel.1},
+            Some(rel) => { rel.1 }
             _ => {
                 false
             }

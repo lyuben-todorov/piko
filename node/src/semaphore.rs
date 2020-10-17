@@ -84,7 +84,7 @@ impl Client {
         Client { channel: tx }
     }
     pub fn consume(&self) {
-        self.channel.send(());
+        self.channel.send(()).unwrap();
     }
 }
 

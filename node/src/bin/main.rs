@@ -99,9 +99,6 @@ fn main() {
         .expect("Missing client socket name");
     let external_addr = settings
         .get_str("node.external_addr");
-    let _thread_count = settings
-        .get_int("node.thread_count")
-        .expect("Missing node thread_count.");
     let neighbour_host_names = settings
         .get_array("cluster.neighbours")
         .expect("Missing cluster settings.");
@@ -167,7 +164,6 @@ fn main() {
     let state_ref = state.clone();
     let pledge_queue_ref = pledge_queue.clone();
     let semaphore_ref = semaphore.clone();
-    let _pledge_sender_ref = pledge_sender.clone();
     rayon::spawn(move || client_listener(
         client_socket,
         state_ref,
@@ -211,7 +207,6 @@ fn main() {
             _ => {}
         }
     }
-
 
     info!("Shutting down.");
 }
