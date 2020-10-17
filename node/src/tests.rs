@@ -1,12 +1,9 @@
 #[cfg(test)]
 mod tests {
     #[test]
-    fn test_decode_header() {
-    }
+    fn test_decode_header() {}
 
 
     #[test]
-    fn test_decode_node() {
-
-    }
+    fn test_decode_node() {}
 }

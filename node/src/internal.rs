@@ -3,5 +3,5 @@ pub enum TaskSignal {
     StartProcess,
     Success,
     Fail,
-    GracefulShutdown
+    GracefulShutdown,
 }

@@ -19,7 +19,6 @@ use chrono::{Utc, DateTime};
 use crate::semaphore::OrdSemaphore;
 
 
-
 pub struct Client<'a> {
     identity: u64,
     message_queue: VecDeque<&'a Vec<u8>>,
@@ -157,7 +156,7 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, // Node
                         message_queue: VecDeque::<&Vec<u8>>::new(),
                     };
 
-                    let mut client_list =client_list.write().unwrap();
+                    let mut client_list = client_list.write().unwrap();
                     let write = client_list.insert(client_id, RwLock::from(client));
                     match write {
                         None => ok(&mut stream),
@@ -238,7 +237,7 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, // Node
                         TaskSignal::Success => {
                             client.consume();
                             let mut messages = pending_messages.lock().unwrap();
-                            messages.entry(key).and_modify(|x|x.1 = true);
+                            messages.entry(key).and_modify(|x| x.1 = true);
                             info!("Resource REQUEST acknowledged!");
                         }
                         _ => {

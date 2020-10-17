@@ -25,15 +25,16 @@ lazy_static! {
     pub static ref SENDER: Mutex<u16> = Mutex::new(0);
 }
 
-pub fn get_proto_version() -> String{
+pub fn get_proto_version() -> String {
     return PROTO_VERSION.clone();
 }
+
 pub fn set_sender_id(id: u16) {
     let mut _id = SENDER.lock().unwrap();
     *_id = id;
 }
 
-fn calculate_hash(message: &Vec<u8>, timestamp: &DateTime<Utc>) -> ([u8;32], u16) {
+fn calculate_hash(message: &Vec<u8>, timestamp: &DateTime<Utc>) -> ([u8; 32], u16) {
     let mut hasher = Sha256::new();
 
     DynDigest::update(&mut hasher, &message.as_slice());
@@ -48,6 +49,7 @@ fn calculate_hash(message: &Vec<u8>, timestamp: &DateTime<Utc>) -> ([u8;32], u16
 
     return (message_hash, shorthand);
 }
+
 // Enumeration over the types of protocol messages
 #[derive(FromPrimitive, ToPrimitive, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Type {
@@ -179,7 +181,7 @@ impl PartialOrd for ResourceRequest {
     }
 }
 
-#[derive(Serialize,Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct ResourceRelease {
     pub owner: u16,
     pub message_hash: [u8; 32],
@@ -192,12 +194,11 @@ pub struct ResourceRelease {
 
 impl ResourceRequest {
     pub fn generate(message: Vec<u8>) -> (ResourceRequest, ResourceRelease) {
-
         let timestamp = Utc::now();
 
         let (message_hash, shorthand) = calculate_hash(&message, &timestamp);
 
-        let id =  *crate::proto::SENDER.lock().unwrap();
+        let id = *crate::proto::SENDER.lock().unwrap();
         (
             ResourceRequest {
                 owner: id,
@@ -364,7 +365,7 @@ impl ProtoParcel {
             parcel_type: Type::ResourceRelease,
             body: Body::ResourceRelease {
                 resource_release
-            }
+            },
         }
     }
 

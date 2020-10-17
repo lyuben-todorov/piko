@@ -75,7 +75,6 @@ fn discover(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<Vec<Nod
     match res_parcel.parcel_type {
         Type::DscRes => {
             if let Body::DscRes { mut neighbours, mut self_id } = res_parcel.body {
-
                 self_id.external_addr = *host; // change hostname to the one the node was contacted on
                 neighbours.push(self_id);
                 tx.send(neighbours).unwrap();

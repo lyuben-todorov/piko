@@ -8,7 +8,6 @@ use crate::net::{write_parcel, read_parcel, is_acked};
 use log::{info, error, debug};
 
 pub fn pub_req(neighbour_list: &Vec<SocketAddr>, req: ResourceRequest) -> TaskSignal {
-
     let (sender, receiver): (Sender<TaskSignal>, Receiver<TaskSignal>) = mpsc::channel(); // setup channel for results
 
     let req = ProtoParcel::resource_request(req);
@@ -28,11 +27,11 @@ pub fn pub_req(neighbour_list: &Vec<SocketAddr>, req: ResourceRequest) -> TaskSi
                 debug!("Acked {}/{}", received_acks, total_acks);
 
                 if total_acks == received_acks {
-                    return TaskSignal::Success
+                    return TaskSignal::Success;
                 }
             }
             _ => {
-                return TaskSignal::Fail
+                return TaskSignal::Fail;
             }
         }
     }

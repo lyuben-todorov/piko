@@ -12,7 +12,7 @@ pub fn get_ext_addr_from_neighbour(host: &SocketAddr) -> Option<SocketAddr> {
         Ok(stream) => stream,
         Err(err) => {
             error!("{}: {}", err, host);
-            return None
+            return None;
         }
     };
 

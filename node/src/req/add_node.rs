@@ -22,7 +22,7 @@ pub fn add_node(neighbour_list: &Vec<SocketAddr>, nodes: Vec<Node>) {
     });
     // end parallel scope
 
-    for result in receiver.iter(){
+    for result in receiver.iter() {
         match result {
             TaskSignal::Success => {}
             TaskSignal::Fail => {}

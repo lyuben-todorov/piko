@@ -143,7 +143,7 @@ fn main() {
     let state = Arc::new(RwLock::new(State::new(Mode::Dsc, name, addr, external_addr, neighbours)));
     let pledge_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>> = Arc::new(Mutex::new(BinaryHeap::new()));
     let semaphore: Arc<OrdSemaphore<DateTime<Utc>>> = Arc::new(OrdSemaphore::new());
-    let pending_messages: Arc<Mutex<HashMap<u16, (ResourceRelease, bool)>>>= Arc::new(Mutex::new(HashMap::new()));
+    let pending_messages: Arc<Mutex<HashMap<u16, (ResourceRelease, bool)>>> = Arc::new(Mutex::new(HashMap::new()));
 
     // Start network listener thread
     let state_ref = state.clone();
@@ -157,7 +157,7 @@ fn main() {
         state_ref,
         pledge_queue_ref,
         semaphore_ref,
-        pledge_sender_ref
+        pledge_sender_ref,
     ));
 
     // Start client listener thread
@@ -169,7 +169,7 @@ fn main() {
         state_ref,
         pledge_queue_ref,
         semaphore_ref,
-        pending_messages_ref
+        pending_messages_ref,
     ));
 
     // Start heartbeat thread
@@ -179,7 +179,7 @@ fn main() {
         state_ref,
         5,
         5,
-        monitor_receiver
+        monitor_receiver,
     ));
 
 
@@ -196,7 +196,7 @@ fn main() {
             Mode::Wrk => {
                 drop(state_lock);
                 wrk(state.clone(), pledge_queue.clone(),
-                    &work_receiver,pending_messages.clone());
+                    &work_receiver, pending_messages.clone());
             }
             Mode::Err => {}
             Mode::Panic => {}

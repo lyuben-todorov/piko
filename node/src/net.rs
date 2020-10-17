@@ -183,7 +183,6 @@ pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, resource_
                             let parcel = ProtoParcel::ack(parcel.id);
                             write_parcel(&mut stream, &parcel);
                             debug!("3 rel");
-
                         } else {
                             warn!("Neighbour attempted to release resource without lock");
                             let parcel = ProtoParcel::proto_error();

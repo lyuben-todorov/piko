@@ -53,7 +53,6 @@ impl State {
     pub fn new(mode: Mode, name: String,
                internal_addr: SocketAddr, external_addr: Option<SocketAddr>,
                neighbours: HashMap<u16, Node>) -> Self {
-
         let id = Sha256::digest(name.as_bytes()).as_slice().read_u16::<BigEndian>().unwrap();
 
         set_sender_id(id);
