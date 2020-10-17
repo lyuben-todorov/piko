@@ -8,17 +8,17 @@ use byteorder::{ReadBytesExt, WriteBytesExt};
 use std::io::{Read, Write};
 use std::error::Error;
 
-use crate::proto::{ResourceRequest, ResourceRelease, Pledge};
+use crate::proto::{ResourceRequest, ResourceRelease};
 use crate::req::publish::pub_req;
 use crate::state::State;
 
 use log::{info, error, debug};
-use std::sync::mpsc::Sender;
+
 use crate::internal::TaskSignal;
 use chrono::{Utc, DateTime};
 use crate::semaphore::OrdSemaphore;
-use std::borrow::Borrow;
-use std::time::Duration;
+
+
 
 pub struct Client<'a> {
     identity: u64,

@@ -25,13 +25,13 @@ use std::sync::{Arc, mpsc, RwLock, Mutex};
 use std::sync::mpsc::{Sender, Receiver};
 
 use piko::internal::TaskSignal;
-use piko::proto::{ResourceRequest, Pledge, ResourceRelease, get_proto_version};
+use piko::proto::{ResourceRequest, ResourceRelease, get_proto_version};
 
 use fern::colors::{Color, ColoredLevelConfig};
 use log::{info};
 
 use piko::heartbeat::heartbeat;
-use piko::client::{client_listener, Client};
+use piko::client::{client_listener};
 use piko::wrk::wrk;
 use piko::semaphore::OrdSemaphore;
 use chrono::{DateTime, Utc};
@@ -99,7 +99,7 @@ fn main() {
         .expect("Missing client socket name");
     let external_addr = settings
         .get_str("node.external_addr");
-    let thread_count = settings
+    let _thread_count = settings
         .get_int("node.thread_count")
         .expect("Missing node thread_count.");
     let neighbour_host_names = settings
@@ -167,7 +167,7 @@ fn main() {
     let state_ref = state.clone();
     let pledge_queue_ref = pledge_queue.clone();
     let semaphore_ref = semaphore.clone();
-    let pledge_sender_ref = pledge_sender.clone();
+    let _pledge_sender_ref = pledge_sender.clone();
     rayon::spawn(move || client_listener(
         client_socket,
         state_ref,

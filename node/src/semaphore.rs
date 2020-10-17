@@ -1,4 +1,4 @@
-use std::collections::{HashMap, BinaryHeap};
+use std::collections::{BinaryHeap};
 use std::sync::RwLock;
 use std::cmp::{Ordering, Reverse};
 use crossbeam_channel::{bounded, Sender, Receiver};

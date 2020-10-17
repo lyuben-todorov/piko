@@ -5,13 +5,13 @@ use std::sync::{RwLock, Arc, Mutex};
 use crate::req::{push_state::push_state, seq_recovery::seq_recovery};
 
 use log::{info, debug, error};
-use std::sync::mpsc::{Receiver, TryRecvError};
-use crate::proto::{Pledge, ResourceRequest, ResourceRelease};
-use std::collections::{BinaryHeap, HashMap, VecDeque};
-use crate::client::Client;
+use std::sync::mpsc::{Receiver};
+use crate::proto::{ResourceRequest, ResourceRelease};
+use std::collections::{BinaryHeap, HashMap};
+
 use crate::req::publish::pub_rel;
 use std::time::Duration;
-use rand::thread_rng;
+
 
 static SLEEP_TIME_MILLIS: u64 = 10;
 
@@ -38,7 +38,7 @@ pub fn wrk(state: Arc<RwLock<State>>, resource_queue: Arc<Mutex<BinaryHeap<Resou
 
     loop {
         let q_ref = &resource_queue.clone();
-        let mut q_lock = q_ref.lock().unwrap();
+        let q_lock = q_ref.lock().unwrap();
         let (req_owner, req_key) = match q_lock.peek() {
             None => {
                 // Queue was empty
@@ -68,7 +68,7 @@ pub fn wrk(state: Arc<RwLock<State>>, resource_queue: Arc<Mutex<BinaryHeap<Resou
         } else {
             // gather resource releases
             let mut releases: usize = 0;
-            let mut q_lock = q_ref.lock().unwrap();
+            let q_lock = q_ref.lock().unwrap();
             let req = q_lock.peek().unwrap();
             let owner = req.owner;
             drop(q_lock);
@@ -97,7 +97,7 @@ fn is_acknowledged(map: Arc<Mutex<HashMap<u16, (ResourceRelease, bool)>>>, rel_k
     let mut response = false;
 
     // try a few times
-    for i in 0..TRYOUTS {
+    for _i in 0..TRYOUTS {
         let map = map.lock().unwrap();
         response = match map.get(&rel_key) {
             Some(rel) => {rel.1},
