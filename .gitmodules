@@ -5,3 +5,7 @@
 [submodule "piko-cli"]
 	path = piko-cli
 	url = git@github.com:lyuben-todorov/piko-cli.git
+
+[submodule "willis"]
+	path = willis
+	url = git@github.com:lyuben-todorov/willis.git
