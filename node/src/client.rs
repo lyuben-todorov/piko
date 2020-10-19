@@ -17,6 +17,7 @@ use log::{info, error, debug};
 use crate::internal::TaskSignal;
 use chrono::{Utc, DateTime};
 use crate::semaphore::OrdSemaphore;
+use std::time::Duration;
 
 
 pub struct Client<'a> {
@@ -212,11 +213,9 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, // Node
                     let client = semaphore.create_task(req.timestamp);
 
                     // Place REQUEST on local queue
-                    debug!("2 lock");
                     let mut pledge_queue = pledge_queue.lock().unwrap();
                     pledge_queue.push(req);
                     drop(pledge_queue);
-                    debug!("2 rel");
 
                     // Place eventual RELEASE on KV store
                     let mut messages = pending_messages.lock().unwrap();
@@ -224,7 +223,7 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, // Node
                     drop(messages);
 
                     // debug!("Sleeping to simulate concurrent request!");
-                    // std::thread::sleep(Duration::from_secs(5));
+                    // std::thread::sleep(Duration::from_secs(15));
 
                     // Publish REQUEST
                     let state_ref = state_ref.read().unwrap();

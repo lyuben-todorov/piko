@@ -38,7 +38,7 @@ pub fn wrk(state: Arc<RwLock<State>>, resource_queue: Arc<Mutex<BinaryHeap<Resou
 
     loop {
         let q_ref = &resource_queue.clone();
-        let q_lock = q_ref.lock().unwrap();
+        let mut q_lock = q_ref.lock().unwrap();
         let (req_owner, req_key) = match q_lock.peek() {
             None => {
                 // Queue was empty
@@ -50,13 +50,12 @@ pub fn wrk(state: Arc<RwLock<State>>, resource_queue: Arc<Mutex<BinaryHeap<Resou
                 (req.owner, req.shorthand)
             }
         };
-        // debug!("Current req: {} Me: {}", req.owner, self_id);
-        drop(q_lock);
         if req_owner == self_id && is_acknowledged(pending_messages.clone(), req_key) {
             // begin executing CS
-            let mut q_lock = q_ref.lock().unwrap();
+            debug!("Current req: {} Me: {} Hash: {}", req_owner, self_id, req_key);
+
             let resource = q_lock.pop().unwrap();
-            info!("Entering CS! node {} message {}", resource.owner, resource.shorthand);
+            info!("Entering CS! node {} hash {}", resource.owner, resource.shorthand);
             let mut messages = pending_messages.lock().unwrap();
             let message = messages.remove(&resource.shorthand).unwrap();
 
@@ -68,14 +67,12 @@ pub fn wrk(state: Arc<RwLock<State>>, resource_queue: Arc<Mutex<BinaryHeap<Resou
         } else {
             // gather resource releases
             let mut releases: usize = 0;
-            let q_lock = q_ref.lock().unwrap();
-            let req = q_lock.peek().unwrap();
-            let owner = req.owner;
+            // let q_lock = q_ref.lock().unwrap();
+            // let req = q_lock.peek().unwrap();
             drop(q_lock);
             for rel in recv.try_iter() {
                 releases += 1;
-                debug!("{} {}", owner, rel.owner);
-                if owner == rel.owner {
+                if req_owner == rel.owner {
                     let mut q_lock = q_ref.lock().unwrap();
                     let pledge = q_lock.pop().unwrap();
                     info!("Neighbour exited CS! node {} message {}", pledge.owner, String::from_utf8(rel.message.message).unwrap());

@@ -163,11 +163,9 @@ pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, resource_
 
                         semaphore.wait_until(&resource_request.timestamp);
 
-                        debug!("4 lock");
                         let mut pledge_queue = pledge_queue.lock().unwrap();
                         pledge_queue.push(resource_request);
                         drop(pledge_queue);
-                        debug!("4 rel");
                         let ack = ProtoParcel::ack(parcel.id);
                         write_parcel(&mut stream, &ack);
                     }
@@ -176,18 +174,15 @@ pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, resource_
                     if let Body::ResourceRelease { resource_release } = parcel.body {
                         info!("Processing Resource Release with id {} from node {}", parcel.id, parcel.sender_id);
 
-                        debug!("3 lock");
                         let pledge_queue = pledge_queue.lock().unwrap();
                         if pledge_queue.peek().unwrap().message_hash == resource_release.message_hash {
                             wrk.send(resource_release).unwrap();
                             let parcel = ProtoParcel::ack(parcel.id);
                             write_parcel(&mut stream, &parcel);
-                            debug!("3 rel");
                         } else {
                             warn!("Neighbour attempted to release resource without lock");
                             let parcel = ProtoParcel::proto_error();
                             write_parcel(&mut stream, &parcel);
-                            debug!("3 rel");
                         }
                     }
                 }
