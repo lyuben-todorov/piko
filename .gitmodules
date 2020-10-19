@@ -1,7 +1,0 @@
-[submodule "pcm"]
-	path = pcm
-	url = git@github.com:lyuben-todorov/pcm.git
-
-[submodule "piko-cli"]
-	path = piko-cli
-	url = git@github.com:lyuben-todorov/piko-cli.git
