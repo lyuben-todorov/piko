@@ -59,7 +59,7 @@ fn setup_logger() {
                 message = message,
             ));
         })
-        .level(log::LevelFilter::Debug)
+        .level(log::LevelFilter::Info)
         // output to stdout
         .chain(std::io::stdout())
         .apply()

@@ -66,24 +66,22 @@ pub fn wrk(state: Arc<RwLock<State>>, resource_queue: Arc<Mutex<BinaryHeap<Resou
             pub_rel(&state.get_neighbour_addrs(), message.0);
         } else {
             // gather resource releases
-            let mut releases: usize = 0;
-            // let q_lock = q_ref.lock().unwrap();
-            // let req = q_lock.peek().unwrap();
             drop(q_lock);
-            for rel in recv.try_iter() {
-                releases += 1;
-                if req_owner == rel.owner {
-                    let mut q_lock = q_ref.lock().unwrap();
-                    let pledge = q_lock.pop().unwrap();
-                    info!("Neighbour exited CS! node {} message {}", pledge.owner, String::from_utf8(rel.message.message).unwrap());
-                    drop(q_lock);
-                } else {
-                    error!("Neighbour tried entering CS without lock!");
+            match recv.try_recv() {
+                Ok(rel) => {
+                    if req_owner == rel.owner {
+                        let mut q_lock = q_ref.lock().unwrap();
+                        let pledge = q_lock.pop().unwrap();
+                        info!("Neighbour exited CS! node {} message {}", pledge.owner, String::from_utf8(rel.message.message).unwrap());
+                        drop(q_lock);
+                    } else {
+                        error!("Neighbour tried entering CS without lock!");
+                    }
                 }
-            }
-            if releases == 0 {
-                std::thread::sleep(Duration::from_millis(SLEEP_TIME_MILLIS));
-            }
+                Err(_) => {
+                    std::thread::sleep(Duration::from_millis(SLEEP_TIME_MILLIS));
+                }
+            };
         }
     }
 }

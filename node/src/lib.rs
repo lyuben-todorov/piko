@@ -1,4 +1,5 @@
 #![feature(binary_heap_retain)]
+#![feature(binary_heap_into_iter_sorted)]
 
 mod tests;
 pub mod msg;

@@ -17,8 +17,6 @@ use log::{info, error, debug};
 use crate::internal::TaskSignal;
 use chrono::{Utc, DateTime};
 use crate::semaphore::OrdSemaphore;
-use std::time::Duration;
-
 
 pub struct Client<'a> {
     identity: u64,
@@ -151,11 +149,12 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, // Node
 
             match req {
                 ClientReq::Subscribe { client_id } => {
-                    debug!("Sub request from client {}", client_id);
                     let client: Client = Client {
                         identity: client_id,
                         message_queue: VecDeque::<&Vec<u8>>::new(),
                     };
+                    debug!("Sub request from client {}", client.identity);
+
 
                     let mut client_list = client_list.write().unwrap();
                     let write = client_list.insert(client_id, RwLock::from(client));
@@ -237,7 +236,7 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, // Node
                             client.consume();
                             let mut messages = pending_messages.lock().unwrap();
                             messages.entry(key).and_modify(|x| x.1 = true);
-                            info!("Resource REQUEST acknowledged!");
+                            debug!("Resource REQUEST acknowledged!");
                         }
                         _ => {
                             error!("Resource REQUEST failed!");

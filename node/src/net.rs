@@ -10,7 +10,7 @@ use byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
 use crate::internal::TaskSignal;
 use crate::req::add_node::add_node;
 
-use log::{error, info, warn, debug};
+use log::{error, info};
 use std::collections::{BinaryHeap};
 use std::error::Error;
 use std::sync::mpsc::Sender;
@@ -172,18 +172,11 @@ pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, resource_
                 }
                 Type::ResourceRelease => {
                     if let Body::ResourceRelease { resource_release } = parcel.body {
-                        info!("Processing Resource Release with id {} from node {}", parcel.id, parcel.sender_id);
+                        info!("Processing Resource Release with hash {} from node {}", resource_release.shorthand, parcel.sender_id);
 
-                        let pledge_queue = pledge_queue.lock().unwrap();
-                        if pledge_queue.peek().unwrap().message_hash == resource_release.message_hash {
-                            wrk.send(resource_release).unwrap();
-                            let parcel = ProtoParcel::ack(parcel.id);
-                            write_parcel(&mut stream, &parcel);
-                        } else {
-                            warn!("Neighbour attempted to release resource without lock");
-                            let parcel = ProtoParcel::proto_error();
-                            write_parcel(&mut stream, &parcel);
-                        }
+                        wrk.send(resource_release).unwrap();
+                        let parcel = ProtoParcel::ack(parcel.id);
+                        write_parcel(&mut stream, &parcel);
                     }
                 }
                 Type::ExtAddrReq => {
