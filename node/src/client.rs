@@ -12,7 +12,7 @@ use crate::proto::{ResourceRequest, ResourceRelease};
 use crate::req::publish::pub_req;
 use crate::state::State;
 
-use log::{info, error, debug};
+use log::{info, error, debug, warn};
 
 use crate::internal::TaskSignal;
 use chrono::{Utc, DateTime};
@@ -112,8 +112,18 @@ fn write_res(stream: &mut TcpStream, res: ClientRes) {
     let buf = serde_cbor::to_vec(&res).unwrap();
 
     // debug!("Writing {} bytes to client", buf.len());
-    stream.write_u8(buf.len() as u8).;
-    stream.write_all(buf.as_slice());
+    match stream.write_u8(buf.len() as u8) {
+        Ok(_) => {}
+        Err(err) => {
+            warn!("Client write error! {}", err )
+        }
+    };
+    match stream.write_all(buf.as_slice()){
+        Ok(_) => {}
+        Err(err) => {
+            warn!("Client write error! {}", err )
+        }
+    };
 }
 
 fn ok(stream: &mut TcpStream) {
@@ -253,7 +263,8 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, // Node
                     loop {
                         let mut pledge_queue = pledge_queue.lock().unwrap();
                         if pledge_queue.len() == 0 {
-                            ok(&mut stream)
+                            ok(&mut stream);
+                            return
                         } else {
                             drop(pledge_queue);
                             std::thread::sleep(Duration::from_millis(50));
