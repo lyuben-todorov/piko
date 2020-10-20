@@ -5,7 +5,7 @@ use crate::proto::{ResourceRequest, ProtoParcel, ResourceRelease};
 use std::sync::mpsc;
 use rayon::prelude::*;
 use crate::net::{write_parcel, read_parcel, is_acked};
-use log::{info, error, debug};
+use log::{error, debug};
 
 pub fn pub_req(neighbour_list: &Vec<SocketAddr>, req: ResourceRequest) -> TaskSignal {
     let (sender, receiver): (Sender<TaskSignal>, Receiver<TaskSignal>) = mpsc::channel(); // setup channel for results

@@ -21,7 +21,7 @@ use std::env::current_dir;
 use std::path::{PathBuf};
 
 use piko::net::listener_thread;
-use std::sync::{Arc, mpsc, RwLock, Mutex};
+use std::sync::{Arc, RwLock, Mutex};
 
 use piko::internal::TaskSignal;
 use piko::proto::{ResourceRequest, ResourceRelease, get_proto_version};

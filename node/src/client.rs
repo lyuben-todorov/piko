@@ -12,7 +12,7 @@ use crate::proto::{ResourceRequest, ResourceRelease};
 use crate::req::publish::pub_req;
 use crate::state::State;
 
-use log::{info, error, debug, warn};
+use log::{error, debug, warn};
 
 use crate::internal::TaskSignal;
 use chrono::{Utc, DateTime};
@@ -259,9 +259,9 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, // Node
                     // ack client
                     ok(&mut stream);
                 }
-                ClientReq::WaitUntilClear { client_id } => {
+                ClientReq::WaitUntilClear { client_id: _ } => {
                     loop {
-                        let mut pledge_queue = pledge_queue.lock().unwrap();
+                        let pledge_queue = pledge_queue.lock().unwrap();
                         if pledge_queue.len() == 0 {
                             ok(&mut stream);
                             return

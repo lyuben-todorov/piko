@@ -5,7 +5,7 @@ use crate::internal::TaskSignal;
 use std::sync::mpsc;
 use rayon::prelude::*;
 use crate::net::{write_parcel, read_parcel, is_acked};
-use log::{error, info, debug};
+use log::{error, debug};
 
 pub fn replicate_message(neighbour_list: &Vec<SocketAddr>, _resource: ResourceRelease) {
     let (sender, _receiver): (Sender<TaskSignal>, Receiver<TaskSignal>) = mpsc::channel(); // setup channel for results

@@ -1,5 +1,5 @@
 use crate::state::{State, Mode, Node};
-use std::sync::{RwLock, Arc, mpsc};
+use std::sync::{RwLock, Arc};
 use crossbeam_channel::{Sender, Receiver};
 use std::net::{TcpStream};
 use crate::proto::{ProtoParcel, Type};

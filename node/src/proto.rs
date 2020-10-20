@@ -18,7 +18,7 @@ use std::net::SocketAddr;
 use sha2::{Sha256, Digest};
 use std::convert::TryInto;
 use sha2::digest::DynDigest;
-use std::hash::Hash;
+
 
 lazy_static! {
     // WIP :/
