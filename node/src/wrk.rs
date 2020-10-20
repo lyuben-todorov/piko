@@ -17,7 +17,7 @@ static SLEEP_TIME_MILLIS: u64 = 10;
 
 // Tasked with maintaining protocol consistency
 pub fn wrk(state: Arc<RwLock<State>>, resource_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>>,
-           recv: &Receiver<ResourceRelease>, pending_messages: Arc<Mutex<HashMap<u16, (ResourceRelease, bool)>>>) {
+           recv: &Receiver<ResourceRelease>, pending_messages: Arc<Mutex<HashMap<u64, (ResourceRelease, bool)>>>) {
     let mut state_ref = state.write().unwrap();
 
     let self_id = state_ref.id;
@@ -71,7 +71,6 @@ pub fn wrk(state: Arc<RwLock<State>>, resource_queue: Arc<Mutex<BinaryHeap<Resou
                 Ok(rel) => {
                     if req_owner == rel.owner {
                         let mut q_lock = q_ref.lock().unwrap();
-                        println!("{}", q_lock.len());
                         let pledge = q_lock.pop().unwrap();
                         info!("Neighbour exited CS! node {} message {}", pledge.owner, String::from_utf8(rel.message.message).unwrap());
                         drop(q_lock);
@@ -80,7 +79,6 @@ pub fn wrk(state: Arc<RwLock<State>>, resource_queue: Arc<Mutex<BinaryHeap<Resou
                     }
                 }
                 Err(_) => {
-                    println!("channel empty");
                     std::thread::sleep(Duration::from_millis(SLEEP_TIME_MILLIS));
                 }
             };
@@ -88,7 +86,7 @@ pub fn wrk(state: Arc<RwLock<State>>, resource_queue: Arc<Mutex<BinaryHeap<Resou
     }
 }
 
-fn is_acknowledged(map: Arc<Mutex<HashMap<u16, (ResourceRelease, bool)>>>, rel_key: u16) -> bool {
+fn is_acknowledged(map: Arc<Mutex<HashMap<u64, (ResourceRelease, bool)>>>, rel_key: u64) -> bool {
     const TRYOUTS: u8 = 3;
     let mut response = false;
 
@@ -96,9 +94,11 @@ fn is_acknowledged(map: Arc<Mutex<HashMap<u16, (ResourceRelease, bool)>>>, rel_k
     for _i in 0..TRYOUTS {
         let map = map.lock().unwrap();
         response = match map.get(&rel_key) {
-            Some(rel) => { rel.1 }
+            Some(rel) => {
+                rel.1
+            }
             _ => {
-                false
+                panic!("Not in map! Increase the size of your hash :)");
             }
         };
         drop(map);

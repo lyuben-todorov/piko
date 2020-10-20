@@ -143,7 +143,7 @@ fn main() {
     let state = Arc::new(RwLock::new(State::new(Mode::Dsc, name, addr, external_addr, neighbours)));
     let pledge_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>> = Arc::new(Mutex::new(BinaryHeap::new()));
     let semaphore: Arc<OrdSemaphore<DateTime<Utc>>> = Arc::new(OrdSemaphore::new());
-    let pending_messages: Arc<Mutex<HashMap<u16, (ResourceRelease, bool)>>> = Arc::new(Mutex::new(HashMap::new()));
+    let pending_messages: Arc<Mutex<HashMap<u64, (ResourceRelease, bool)>>> = Arc::new(Mutex::new(HashMap::new()));
 
     // Start network listener thread
     let state_ref = state.clone();

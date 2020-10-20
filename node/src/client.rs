@@ -17,6 +17,7 @@ use log::{info, error, debug};
 use crate::internal::TaskSignal;
 use chrono::{Utc, DateTime};
 use crate::semaphore::OrdSemaphore;
+use std::time::Duration;
 
 pub struct Client<'a> {
     identity: u64,
@@ -61,6 +62,9 @@ pub enum ClientReq {
     Publish {
         client_id: u64,
         message: Vec<u8>,
+    },
+    WaitUntilClear {
+        client_id: u64
     },
 }
 
@@ -108,8 +112,8 @@ fn write_res(stream: &mut TcpStream, res: ClientRes) {
     let buf = serde_cbor::to_vec(&res).unwrap();
 
     // debug!("Writing {} bytes to client", buf.len());
-    stream.write_u8(buf.len() as u8).unwrap();
-    stream.write_all(buf.as_slice()).unwrap();
+    stream.write_u8(buf.len() as u8).;
+    stream.write_all(buf.as_slice());
 }
 
 fn ok(stream: &mut TcpStream) {
@@ -127,7 +131,7 @@ fn err(stream: &mut TcpStream, message: &str) {
 pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, // Node state & listener
                        resource_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>>, // Resource queue
                        semaphore: Arc<OrdSemaphore<DateTime<Utc>>>, // Total order slemaphore
-                       pending_messages: Arc<Mutex<HashMap<u16, (ResourceRelease, bool)>>>) {
+                       pending_messages: Arc<Mutex<HashMap<u64, (ResourceRelease, bool)>>>) {
     for stream in listener.incoming() {
         let mut stream = stream.unwrap();
 
@@ -244,6 +248,17 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, // Node
                     }
                     // ack client
                     ok(&mut stream);
+                }
+                ClientReq::WaitUntilClear { client_id } => {
+                    loop {
+                        let mut pledge_queue = pledge_queue.lock().unwrap();
+                        if pledge_queue.len() == 0 {
+                            ok(&mut stream)
+                        } else {
+                            drop(pledge_queue);
+                            std::thread::sleep(Duration::from_millis(50));
+                        }
+                    }
                 }
             }
         })

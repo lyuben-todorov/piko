@@ -18,12 +18,16 @@ use std::net::SocketAddr;
 use sha2::{Sha256, Digest};
 use std::convert::TryInto;
 use sha2::digest::DynDigest;
+use std::hash::Hash;
 
 lazy_static! {
     // WIP :/
     pub static ref PROTO_VERSION: String = "1.1".to_string();
     pub static ref SENDER: Mutex<u16> = Mutex::new(0);
 }
+const PRIME_ONE: u64 = 2999085892127319403;
+const PRIME_TWO: u64 = 13962674565864582377;
+const PRIME_THREE: u64 = 13714677094544069263;
 
 pub fn get_proto_version() -> String {
     return PROTO_VERSION.clone();
@@ -34,7 +38,7 @@ pub fn set_sender_id(id: u16) {
     *_id = id;
 }
 
-fn calculate_hash(message: &Vec<u8>, timestamp: &DateTime<Utc>) -> ([u8; 32], u16) {
+fn calculate_hash(message: &Vec<u8>, timestamp: &DateTime<Utc>) -> ([u8; 32], u64) {
     let mut hasher = Sha256::new();
 
     DynDigest::update(&mut hasher, &message.as_slice());
@@ -42,10 +46,17 @@ fn calculate_hash(message: &Vec<u8>, timestamp: &DateTime<Utc>) -> ([u8; 32], u1
 
     let message_hash: [u8; 32] = hasher.finalize().into();
 
-    let shorthand = message_hash.chunks(2).into_iter().map(|x: &[u8]| {
-        let chunk: u16 = u16::from_be_bytes(x.try_into().unwrap());
+    let shorthand = message_hash.chunks(8).into_iter().map(|x: &[u8]| {
+        let chunk: u64 = u64::from_be_bytes(x.try_into().unwrap());
         chunk
-    }).fold(0, |x: u16, y: u16| { x ^ y });
+    }).fold(0, |x: u64, y: u64| {
+        // compute (x * p1 + y * p2) % p3 with overflows
+        u64::overflowing_rem(
+            u64::overflowing_add(
+                u64::overflowing_mul(x, PRIME_ONE).0,
+                u64::overflowing_mul(y, PRIME_TWO).0).0,
+            PRIME_THREE).0
+    });
 
     return (message_hash, shorthand);
 }
@@ -164,7 +175,7 @@ pub struct MessageWrapper {
 pub struct ResourceRequest {
     pub owner: u16,
     pub message_hash: [u8; 32],
-    pub shorthand: u16,
+    pub shorthand: u64,
     pub timestamp: DateTime<Utc>,
     pub sequence: u16,
 }
@@ -185,7 +196,7 @@ impl PartialOrd for ResourceRequest {
 pub struct ResourceRelease {
     pub owner: u16,
     pub message_hash: [u8; 32],
-    pub shorthand: u16,
+    pub shorthand: u64,
     pub timestamp: DateTime<Utc>,
     pub message: MessageWrapper,
     pub local: bool,
