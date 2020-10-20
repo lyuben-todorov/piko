@@ -205,7 +205,7 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, // Node
                 }
                 ClientReq::LongPoll { client_id: _ } => {}
                 ClientReq::Publish { client_id, message } => {
-                    info!("Publishing message from client {} with size {}", client_id, message.len());
+                    debug!("Publishing message from client {} with size {}", client_id, message.len());
                     let (req, rel) = ResourceRequest::generate(message);
                     let key = rel.shorthand;
 

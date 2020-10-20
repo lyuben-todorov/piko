@@ -5,7 +5,7 @@ use std::sync::{RwLock, Arc, Mutex};
 use crate::req::{push_state::push_state, seq_recovery::seq_recovery};
 
 use log::{info, debug, error};
-use std::sync::mpsc::{Receiver};
+use crossbeam_channel::{Receiver};
 use crate::proto::{ResourceRequest, ResourceRelease};
 use std::collections::{BinaryHeap, HashMap};
 
@@ -71,6 +71,7 @@ pub fn wrk(state: Arc<RwLock<State>>, resource_queue: Arc<Mutex<BinaryHeap<Resou
                 Ok(rel) => {
                     if req_owner == rel.owner {
                         let mut q_lock = q_ref.lock().unwrap();
+                        println!("{}", q_lock.len());
                         let pledge = q_lock.pop().unwrap();
                         info!("Neighbour exited CS! node {} message {}", pledge.owner, String::from_utf8(rel.message.message).unwrap());
                         drop(q_lock);
@@ -79,6 +80,7 @@ pub fn wrk(state: Arc<RwLock<State>>, resource_queue: Arc<Mutex<BinaryHeap<Resou
                     }
                 }
                 Err(_) => {
+                    println!("channel empty");
                     std::thread::sleep(Duration::from_millis(SLEEP_TIME_MILLIS));
                 }
             };

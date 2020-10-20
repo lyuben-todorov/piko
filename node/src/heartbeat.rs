@@ -1,6 +1,6 @@
 use crate::state::{State, Mode, Node};
 use std::sync::{RwLock, Arc, mpsc};
-use std::sync::mpsc::{Sender, Receiver};
+use crossbeam_channel::{Sender, Receiver};
 use std::net::{TcpStream};
 use crate::proto::{ProtoParcel, Type};
 use rayon::prelude::*;
@@ -30,7 +30,7 @@ pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, timeout: u32, rx: R
         }
 
         if state_ref.mode == Mode::Wrk {
-            let (sender, receiver): (Sender<(u16, bool)>, Receiver<(u16, bool)>) = mpsc::channel(); // setup channel for results
+            let (sender, receiver): (Sender<(u16, bool)>, Receiver<(u16, bool)>) = crossbeam_channel::unbounded(); // setup channel for results
 
             let neighbour_list: Vec<Node> = state_ref.get_active_neighbours();
             drop(state_ref); // drop lock

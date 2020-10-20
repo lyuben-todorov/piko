@@ -10,10 +10,10 @@ use byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
 use crate::internal::TaskSignal;
 use crate::req::add_node::add_node;
 
-use log::{error, info};
+use log::{error, info, debug};
 use std::collections::{BinaryHeap};
 use std::error::Error;
-use std::sync::mpsc::Sender;
+use crossbeam_channel::{Sender};
 use chrono::{DateTime, Utc};
 use crate::semaphore::OrdSemaphore;
 
@@ -44,7 +44,7 @@ pub fn is_acked(response: ProtoParcel, ack_id: u64) -> TaskSignal {
         Type::Ack => {
             if let Body::Ack { message_id } = response.body {
                 if message_id == ack_id {
-                    info!("Acked {}", message_id);
+                    debug!("Acked {}", message_id);
                     TaskSignal::Success
                 } else {
                     TaskSignal::Fail
@@ -164,6 +164,7 @@ pub fn listener_thread(socket: TcpListener, state: Arc<RwLock<State>>, resource_
                         semaphore.wait_until(&resource_request.timestamp);
 
                         let mut pledge_queue = pledge_queue.lock().unwrap();
+
                         pledge_queue.push(resource_request);
                         drop(pledge_queue);
                         let ack = ProtoParcel::ack(parcel.id);

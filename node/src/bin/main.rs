@@ -22,7 +22,6 @@ use std::path::{PathBuf};
 
 use piko::net::listener_thread;
 use std::sync::{Arc, mpsc, RwLock, Mutex};
-use std::sync::mpsc::{Sender, Receiver};
 
 use piko::internal::TaskSignal;
 use piko::proto::{ResourceRequest, ResourceRelease, get_proto_version};
@@ -35,6 +34,7 @@ use piko::client::{client_listener};
 use piko::wrk::wrk;
 use piko::semaphore::OrdSemaphore;
 use chrono::{DateTime, Utc};
+use crossbeam_channel::{Sender, Receiver};
 
 fn setup_logger() {
     let colors_line = ColoredLevelConfig::new()
@@ -137,7 +137,7 @@ fn main() {
 
     let neighbours = HashMap::<u16, Node>::new();
 
-    let (pledge_sender, work_receiver): (Sender<ResourceRelease>, Receiver<ResourceRelease>) = mpsc::channel();
+    let (pledge_sender, work_receiver): (Sender<ResourceRelease>, Receiver<ResourceRelease>) = crossbeam_channel::unbounded();
 
     // Initiate state & shared data structures
     let state = Arc::new(RwLock::new(State::new(Mode::Dsc, name, addr, external_addr, neighbours)));
@@ -174,7 +174,7 @@ fn main() {
 
     // Start heartbeat thread
     let state_ref = state.clone();
-    let (_monitor_sender, monitor_receiver): (Sender<TaskSignal>, Receiver<TaskSignal>) = mpsc::channel();
+    let (_monitor_sender, monitor_receiver): (Sender<TaskSignal>, Receiver<TaskSignal>) = crossbeam_channel::unbounded();
     rayon::spawn(move || heartbeat(
         state_ref,
         5,

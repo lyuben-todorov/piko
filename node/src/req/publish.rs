@@ -39,7 +39,7 @@ pub fn pub_req(neighbour_list: &Vec<SocketAddr>, req: ResourceRequest) -> TaskSi
 }
 
 fn publish_request(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<TaskSignal>) {
-    info!("Pushing request to {}", host);
+    debug!("Pushing request to {}", host);
     let mut stream = match TcpStream::connect(host) {
         Ok(stream) => stream,
         Err(err) => {
@@ -78,7 +78,7 @@ pub fn pub_rel(neighbour_list: &Vec<SocketAddr>, rel: ResourceRelease) {
 }
 
 fn publish_release(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<TaskSignal>) {
-    info!("Pushing release to {}", host);
+    debug!("Pushing release to {}", host);
     let mut stream = match TcpStream::connect(host) {
         Ok(stream) => stream,
         Err(err) => {
