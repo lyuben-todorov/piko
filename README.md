@@ -12,10 +12,10 @@ Currently, I'm benchmarking the following situations:
 1. n messages to single node in a cluster of m nodes.
 2. Split n messages evenly between m nodes
 
-| # | n    | m     | ops/s        |
-|---|------|-------|--------------|
-| 1 | 1000 | 2     | 90.5 ± 0.204 |
-| 2 | 1000 | 2     | 181 ± 3.05   |
+| # | n    | m     |sample size| ops/s        |
+|---|------|-------|-----------|--------------|
+| 1 | 1000 | 2     |  12       | 90.5 ± 0.204 |
+| 2 | 1000 | 2     |  12       | 181 ± 3.05   |
 
 Split test does in fact achieve twice the throughput which I didn't really expect.
 
