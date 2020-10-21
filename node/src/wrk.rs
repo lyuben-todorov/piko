@@ -98,7 +98,9 @@ fn is_acknowledged(map: Arc<Mutex<HashMap<u64, (ResourceRelease, bool)>>>, rel_k
                 rel.1
             }
             _ => {
-                panic!("Not in map! Increase the size of your hash :)");
+                // Misses in the hash map could be a symptom of random collisions (very low chance)
+                // or protocol bugs.
+                false
             }
         };
         drop(map);
