@@ -1,6 +1,5 @@
 use std::collections::{HashMap, HashSet};
 use sha2::{Sha256, Digest};
-use byteorder::{ReadBytesExt, BigEndian};
 use num_derive::{FromPrimitive, ToPrimitive};
 
 
@@ -12,6 +11,8 @@ use std::fmt;
 use std::net::SocketAddr;
 use crate::state::Mode::Wrk;
 use crate::proto::set_sender_id;
+use tokio_byteorder::AsyncReadBytesExt;
+use std::convert::TryInto;
 
 
 #[derive(FromPrimitive, ToPrimitive, Deserialize, Serialize, Clone, PartialEq)]
@@ -53,8 +54,8 @@ impl State {
     pub fn new(mode: Mode, name: String,
                internal_addr: SocketAddr, external_addr: Option<SocketAddr>,
                neighbours: HashMap<u16, Node>) -> Self {
-        let id = Sha256::digest(name.as_bytes()).as_slice().read_u16::<BigEndian>().unwrap();
-
+        let id : [u8;2] = Sha256::digest(name.as_bytes()).as_slice().try_into().unwrap();
+        let id = u16::from_be_bytes(id);
         set_sender_id(id);
 
         State { id, mode, name, internal_addr, external_addr, neighbours, sequence: 0, current_lock: [0; 32] }
@@ -124,8 +125,8 @@ impl Eq for Node {}
 
 impl Node {
     pub fn new(name: String, mode: Mode, host: SocketAddr) -> Node {
-        let id = Sha256::digest(name.as_bytes()).as_slice().read_u16::<BigEndian>().unwrap();
-
+        let id : [u8;2] = Sha256::digest(name.as_bytes()).as_slice().try_into().unwrap();
+        let id = u16::from_be_bytes(id);
         Node { name, mode, external_addr: host, id }
     }
 }

@@ -1,12 +1,12 @@
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::mpsc;
-use std::net::{SocketAddr, TcpStream};
+use std::net::{SocketAddr};
 use crate::proto::{ProtoParcel};
-use rayon::prelude::*;
 use crate::net::{write_parcel, read_parcel, is_acked};
 use crate::state::Mode;
 use crate::internal::TaskSignal;
 use log::{error, info};
+use tokio::net::TcpStream;
 
 /*
     Pushes state update to each host given.
@@ -17,15 +17,16 @@ pub fn push_state(neighbour_list: &Vec<SocketAddr>, state: Mode) {
     let req = ProtoParcel::state_change(state);
 
     // begin parallel scope
-    neighbour_list.into_par_iter().for_each_with(sender, |s, addr| {
-        update(&addr, &req, s);
-    });
+    // TODO
+    // neighbour_list.into_par_iter().for_each_with(sender, |s, addr| {
+    //     update(&addr, &req, s);
+    // });
     // end parallel scope
 }
 
-fn update(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<TaskSignal>) {
+async fn update(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<TaskSignal>) {
     info!("Pushing update to {}", host);
-    let mut stream = match TcpStream::connect(host) {
+    let mut stream = match TcpStream::connect(host).await {
         Ok(stream) => stream,
         Err(err) => {
             error!("{}: {}", err, host);
@@ -35,7 +36,7 @@ fn update(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<TaskSigna
     let m_id = req_parcel.id;
     write_parcel(&mut stream, &req_parcel);
 
-    let res_parcel = match read_parcel(&mut stream) {
+    let res_parcel = match read_parcel(&mut stream).await {
         Ok(parcel) => parcel,
         Err(e) => {
             error!("Invalid parcel! {}", e);

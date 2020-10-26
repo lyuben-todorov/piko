@@ -1,10 +1,10 @@
 use std::sync::{mpsc};
 use std::sync::mpsc::{Sender, Receiver};
-use rayon::prelude::*;
-use std::net::{SocketAddr, TcpStream};
+use std::net::{SocketAddr};
 use crate::proto::{ProtoParcel, Type, Body};
 use crate::net::{write_parcel, read_parcel};
 use log::{error, info};
+use tokio::net::TcpStream;
 
 /*
     Retrieves sequence number from each host provided, returning the largest(most-latest)
@@ -17,9 +17,10 @@ pub fn seq_recovery(neighbour_list: &Vec<SocketAddr>) -> u8 {
     let req = ProtoParcel::seq_req();
 
     // begin parallel scope
-    neighbour_list.into_par_iter().for_each_with(sender, |s, addr| {
-        recover(&addr, &req, s);
-    });
+    // TODO
+    // neighbour_list.into_par_iter().for_each_with(sender, |s, addr| {
+    //     recover(&addr, &req, s);
+    // });
     // end parallel scope
 
     let max_seq = receiver.iter().max_by_key(|seq| *seq).unwrap();
@@ -27,10 +28,10 @@ pub fn seq_recovery(neighbour_list: &Vec<SocketAddr>) -> u8 {
     max_seq
 }
 
-fn recover(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<u8>) {
+async fn recover(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<u8>) {
     info!("Recovering sequence from {}", host);
 
-    let mut stream = match TcpStream::connect(host) {
+    let mut stream = match TcpStream::connect(host).await {
         Ok(stream) => stream,
         Err(err) => {
             error!("{}: {}", err, host);
@@ -38,7 +39,7 @@ fn recover(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<u8>) {
         }
     };
     write_parcel(&mut stream, &req_parcel);
-    let res_parcel = match read_parcel(&mut stream) {
+    let res_parcel = match read_parcel(&mut stream).await {
         Ok(parcel) => parcel,
         Err(e) => {
             error!("Invalid parcel! {}", e);

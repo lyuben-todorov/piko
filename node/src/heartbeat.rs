@@ -1,9 +1,7 @@
 use crate::state::{State, Mode, Node};
 use std::sync::{RwLock, Arc};
 use crossbeam_channel::{Sender, Receiver};
-use std::net::{TcpStream};
 use crate::proto::{ProtoParcel, Type};
-use rayon::prelude::*;
 use crate::net::{read_parcel, write_parcel};
 use clokwerk::{Scheduler, TimeUnits};
 use std::time::Duration;
@@ -11,8 +9,9 @@ use crate::internal::TaskSignal;
 use std::collections::{HashMap, HashSet};
 
 use log::{debug, error, info, warn};
+use tokio::net::TcpStream;
 
-pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, timeout: u32, rx: Receiver<TaskSignal>) {
+pub async fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, timeout: u32, rx: Receiver<TaskSignal>) {
     let mut scheduler = Scheduler::new();
     // map node id to amount of timeouts
     let mut timeouts: HashMap<u16, u8> = HashMap::new();
@@ -38,10 +37,11 @@ pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, timeout: u32, rx: R
             let req = ProtoParcel::ping();
 
             // begin parallel scope
-            neighbour_list.into_par_iter().for_each_with(sender, |s, addr| {
-                ping(&addr, &req, s);
-            });
-            // end parallel scope
+            // TODO
+            // neighbour_list.into_par_iter().for_each_with(sender, |s, addr| {
+            //     ping(&addr, &req, s);
+            // });
+            // // end parallel scope
 
             for result in receiver.iter() {
                 let (id, node_response) = result;
@@ -83,10 +83,10 @@ pub fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, timeout: u32, rx: R
     }
 }
 
-fn ping(node: &Node, req_parcel: &ProtoParcel, tx: &mut Sender<(u16, bool)>) {
+async fn ping(node: &Node, req_parcel: &ProtoParcel, tx: &mut Sender<(u16, bool)>) {
     // info!("Sending Ping to {}", node.id);
 
-    let mut stream = match TcpStream::connect(node.external_addr) {
+    let mut stream = match TcpStream::connect(node.external_addr).await {
         Ok(stream) => stream,
         Err(err) => {
             debug!("{}: {}", err, node.id);
@@ -95,7 +95,7 @@ fn ping(node: &Node, req_parcel: &ProtoParcel, tx: &mut Sender<(u16, bool)>) {
         }
     };
     write_parcel(&mut stream, &req_parcel);
-    let res_parcel = match read_parcel(&mut stream) {
+    let res_parcel = match read_parcel(&mut stream).await {
         Ok(parcel) => parcel,
         Err(e) => {
             error!("Invalid parcel! {}", e);

@@ -9,9 +9,8 @@ edition = "2018"
 [dependencies]
 rand = "0.7.3"
 config = "0.10.1"
-rayon = "1.3.1"
 sha2 = "0.9.1"
-byteorder = "1.3.4"
+tokio-byteorder = "0.2.0"
 bytes = "0.5.6"
 num = "0.3.0"
 num-traits = "0.2.12"
@@ -25,3 +24,7 @@ fern = { version = "0.6.0", features = ["colored"] }
 chrono = { version = "0.4.15", features = ["serde"] }
 enum_dispatch = "0.3.3"
 crossbeam-channel = "0.5"
+tokio = { version = "0.3.1", features = ["full"] }
+futures = "0.3.7"
+
+

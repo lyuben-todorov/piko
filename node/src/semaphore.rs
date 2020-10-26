@@ -1,7 +1,7 @@
 use std::collections::{BinaryHeap};
 use std::sync::RwLock;
 use std::cmp::{Ordering, Reverse};
-use crossbeam_channel::{bounded, Sender, Receiver};
+use crossbeam_channel::{bounded, Sender, Receiver, RecvError};
 use std::ptr;
 
 /// The goal of this data structure is to provide an explicit ordering of async events in a multi-threaded
@@ -27,6 +27,7 @@ impl<T: Ord> OrdSemaphore<T> {
 
     /// Blocks the caller until all tasks before `event` have been completed.
     pub fn wait_until(&self, event: &T) {
+        let mut depth: u32 = 0;
         loop {
             let queue = self.events.read().unwrap();
             match queue.peek() {
@@ -45,14 +46,25 @@ impl<T: Ord> OrdSemaphore<T> {
                         drop(queue);
 
                         // this blocks until the respective Client has released
-                        channel.recv().unwrap();
+                        let  block = channel.recv();
 
-                        // at this point, we want to do a queue.pop(), however we should prevent
-                        // multiple threads from removing multiple elements
-                        let mut queue = self.events.write().unwrap();
+                        match block {
+                            Ok(_)=>{
+                                // at this point, we want to do a queue.pop(), however we should prevent
+                                // multiple threads from removing multiple elements
+                                let mut queue = self.events.write().unwrap();
+                                // comparing raw pointers probably isn't the best idea.
+                                let before = queue.len();
+                                queue.retain(|x| !ptr::eq(x, pointer));
+                                let after = queue.len();
+                                println!("{} {}", before, after);
+                                depth+=1;
+                            }
+                            Err(_) => {
+                                return;
+                            }
+                        }
 
-                        // comparing raw pointers probably isn't the best idea.
-                        queue.retain(|x| !ptr::eq(x, pointer));
                     } else {
                         // explicit return, no backlog left
                         return;

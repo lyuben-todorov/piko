@@ -1,15 +1,15 @@
 /*
 
  */
-use std::net::{SocketAddr, TcpStream};
+use std::net::{SocketAddr};
 use crate::state::Node;
 use crate::internal::TaskSignal;
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::mpsc;
 use crate::proto::{ProtoParcel};
-use rayon::prelude::*;
 use crate::net::{write_parcel, read_parcel, is_acked};
 use log::{error, info};
+use tokio::net::TcpStream;
 
 pub fn add_node(neighbour_list: &Vec<SocketAddr>, nodes: Vec<Node>) {
     let (sender, receiver): (Sender<TaskSignal>, Receiver<TaskSignal>) = mpsc::channel(); // setup channel for results
@@ -17,9 +17,10 @@ pub fn add_node(neighbour_list: &Vec<SocketAddr>, nodes: Vec<Node>) {
     let req = ProtoParcel::add_node(nodes);
 
     // begin parallel scope
-    neighbour_list.into_par_iter().for_each_with(sender, |s, addr| {
-        update(&addr, &req, s);
-    });
+    // TODO
+    // neighbour_list.into_par_iter().for_each_with(sender, |s, addr| {
+    //     update(&addr, &req, s);
+    // });
     // end parallel scope
 
     for result in receiver.iter() {
@@ -31,9 +32,9 @@ pub fn add_node(neighbour_list: &Vec<SocketAddr>, nodes: Vec<Node>) {
     }
 }
 
-fn update(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<TaskSignal>) {
+async fn update(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<TaskSignal>) {
     info!("Pushing new neighbours to {}", host);
-    let mut stream = match TcpStream::connect(host) {
+    let mut stream = match TcpStream::connect(host).await {
         Ok(stream) => stream,
         Err(err) => {
             error!("{}: {}", err, host);
@@ -44,7 +45,7 @@ fn update(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<TaskSigna
 
     write_parcel(&mut stream, &req_parcel);
 
-    let res_parcel = match read_parcel(&mut stream) {
+    let res_parcel = match read_parcel(&mut stream).await {
         Ok(parcel) => parcel,
         Err(e) => {
             error!("Invalid parcel! {}", e);

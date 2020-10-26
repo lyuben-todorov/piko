@@ -2,9 +2,7 @@ use std::sync::{RwLock, Arc, Mutex};
 
 use std::collections::{VecDeque, HashMap, BinaryHeap};
 
-use std::net::{TcpListener, TcpStream};
 use serde::{Serialize, Deserialize};
-use byteorder::{ReadBytesExt, WriteBytesExt};
 use std::io::{Read, Write};
 use std::error::Error;
 
@@ -18,6 +16,8 @@ use crate::internal::TaskSignal;
 use chrono::{Utc, DateTime};
 use crate::semaphore::OrdSemaphore;
 use std::time::Duration;
+use tokio::net::{TcpStream, TcpListener};
+use tokio::prelude::io::{AsyncReadExt, AsyncWriteExt};
 
 pub struct Client<'a> {
     identity: u64,
@@ -93,14 +93,14 @@ impl ClientReq {
 }
 
 // Read Request from client
-fn read_req(stream: &mut TcpStream) -> Result<ClientReq, Box<dyn Error>> {
-    let count = stream.read_u8()?;
+async fn read_req(stream: &mut TcpStream) -> Result<ClientReq, Box<dyn Error>> {
+    let count = stream.read_u8().await?;
 
     // debug!("Expecting {} bytes", count);
 
     let mut buf = vec![0u8; count as usize];
 
-    stream.read_exact(&mut buf)?;
+    stream.read_exact(&mut buf).await?;
 
     let client_req: ClientReq = serde_cbor::from_slice(buf.as_slice())?;
 
@@ -108,17 +108,17 @@ fn read_req(stream: &mut TcpStream) -> Result<ClientReq, Box<dyn Error>> {
 }
 
 // Write Response to client
-fn write_res(stream: &mut TcpStream, res: ClientRes) {
+async fn write_res(stream: &mut TcpStream, res: ClientRes) {
     let buf = serde_cbor::to_vec(&res).unwrap();
 
     // debug!("Writing {} bytes to client", buf.len());
-    match stream.write_u8(buf.len() as u8) {
+    match stream.write_u8(buf.len() as u8).await {
         Ok(_) => {}
         Err(err) => {
             warn!("Client write error! {}", err )
         }
     };
-    match stream.write_all(buf.as_slice()){
+    match stream.write_all(buf.as_slice()).await{
         Ok(_) => {}
         Err(err) => {
             warn!("Client write error! {}", err )
@@ -138,12 +138,14 @@ fn err(stream: &mut TcpStream, message: &str) {
     write_res(stream, ClientRes::Error { message: message.to_string() });
 }
 
-pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, // Node state & listener
+pub async fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, // Node state & listener
                        resource_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>>, // Resource queue
                        semaphore: Arc<OrdSemaphore<DateTime<Utc>>>, // Total order slemaphore
                        pending_messages: Arc<Mutex<HashMap<u64, (ResourceRelease, bool)>>>) {
-    for stream in listener.incoming() {
-        let mut stream = stream.unwrap();
+
+    loop {
+        let (mut stream, _) = listener.accept().await.unwrap();
+
 
         let client_list: Arc<RwLock<HashMap<u64, RwLock<Client>>>> = Arc::new(RwLock::new(HashMap::<u64, RwLock<Client>>::new()));
         let state_ref = state.clone();
@@ -151,9 +153,10 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, // Node
         let pending_messages = pending_messages.clone();
         let semaphore = semaphore.clone();
 
-        rayon::spawn(move || {
+        println!("Accepted client");
+        tokio::spawn(async move  {
             // debug!("Received message from client!");
-            let req = match read_req(&mut stream) {
+            let req = match read_req(&mut stream).await {
                 Ok(req) => req,
                 Err(e) => {
                     error!("Failed reading message from client! {}", e);
@@ -213,7 +216,7 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, // Node
                                 message: "Message:".to_string(),
                                 bytes: message.to_vec(),
                             };
-                            write_res(&mut stream, res)
+                            write_res(&mut stream, res);
                         }
                     }
                 }
@@ -230,6 +233,9 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, // Node
                     pledge_queue.push(req);
                     drop(pledge_queue);
 
+                    // Ack client. This lets him send another message.
+                    ok(&mut stream);
+
                     // Place eventual RELEASE on KV store
                     let mut messages = pending_messages.lock().unwrap();
                     messages.insert(key, (rel, false));
@@ -245,6 +251,7 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, // Node
 
                     let result = pub_req(neighbours, req);
 
+
                     match result {
                         TaskSignal::Success => {
                             client.consume();
@@ -253,11 +260,11 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, // Node
                             debug!("Resource REQUEST acknowledged!");
                         }
                         _ => {
+                            client.consume();
                             error!("Resource REQUEST failed!");
                         }
                     }
                     // ack client
-                    ok(&mut stream);
                 }
                 ClientReq::WaitUntilClear { client_id: _ } => {
                     loop {
@@ -272,6 +279,6 @@ pub fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, // Node
                     }
                 }
             }
-        })
+        });
     }
 }
