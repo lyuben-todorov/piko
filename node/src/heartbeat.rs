@@ -14,11 +14,11 @@ use tokio::net::TcpStream;
 pub async fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, timeout: u32, rx: Receiver<TaskSignal>) {
     let mut scheduler = Scheduler::new();
     // map node id to amount of timeouts
-    let mut timeouts: HashMap<u16, u8> = HashMap::new();
+    let mut timeouts: HashMap<u64, u8> = HashMap::new();
 
     scheduler.every(heart_rate.seconds()).run(move || {
         let state_ref = state.read().unwrap();
-        let new_keys: HashSet<u16> = state_ref.get_neighbour_keys();
+        let new_keys: HashSet<u64> = state_ref.get_neighbour_keys();
 
         // Add new keys
         for key in new_keys {
@@ -29,7 +29,7 @@ pub async fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, timeout: u32,
         }
 
         if state_ref.mode == Mode::Wrk {
-            let (sender, receiver): (Sender<(u16, bool)>, Receiver<(u16, bool)>) = crossbeam_channel::unbounded(); // setup channel for results
+            let (sender, receiver): (Sender<(u64, bool)>, Receiver<(u64, bool)>) = crossbeam_channel::unbounded(); // setup channel for results
 
             let neighbour_list: Vec<Node> = state_ref.get_active_neighbours();
             drop(state_ref); // drop lock
@@ -83,7 +83,7 @@ pub async fn heartbeat(state: Arc<RwLock<State>>, heart_rate: u32, timeout: u32,
     }
 }
 
-async fn ping(node: &Node, req_parcel: &ProtoParcel, tx: &mut Sender<(u16, bool)>) {
+async fn ping(node: &Node, req_parcel: &ProtoParcel, tx: &mut Sender<(u64, bool)>) {
     // info!("Sending Ping to {}", node.id);
 
     let mut stream = match TcpStream::connect(node.external_addr).await {

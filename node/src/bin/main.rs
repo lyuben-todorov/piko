@@ -139,12 +139,15 @@ fn main() -> Result<(), std::io::Error> {
             Err(error) => panic!("Error binding client socket: {}", error),
         };
 
-        let neighbours = HashMap::<u16, Node>::new();
+        let neighbours = HashMap::<u64, Node>::new();
 
         let (pledge_sender, work_receiver): (Sender<ResourceRelease>, Receiver<ResourceRelease>) = crossbeam_channel::unbounded();
 
         // Initiate state & shared data structures
-        let state = Arc::new(RwLock::new(State::new(Mode::Dsc, name, addr, external_addr, neighbours)));
+        let state = Arc::new(RwLock::new(
+            State::new(Mode::Dsc, name, addr, external_addr, neighbours)
+        ));
+
         let pledge_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>> = Arc::new(Mutex::new(BinaryHeap::new()));
         let semaphore: Arc<OrdSemaphore<DateTime<Utc>>> = Arc::new(OrdSemaphore::new());
         let pending_messages: Arc<Mutex<HashMap<u64, (ResourceRelease, bool)>>> = Arc::new(Mutex::new(HashMap::new()));
@@ -156,7 +159,7 @@ fn main() -> Result<(), std::io::Error> {
         let pledge_sender_ref = pledge_sender.clone();
         let pending_messages_ref = pending_messages.clone();
 
-        tokio::spawn( listener_thread(
+        tokio::spawn(listener_thread(
             cluster_socket,
             state_ref,
             pledge_queue_ref,

@@ -10,9 +10,12 @@ use serde::export::Formatter;
 use std::fmt;
 use std::net::SocketAddr;
 use crate::state::Mode::Wrk;
-use crate::proto::set_sender_id;
+use crate::proto::{set_sender_id, shorten_hash};
 use tokio_byteorder::AsyncReadBytesExt;
 use std::convert::TryInto;
+use std::io::Read;
+use futures::AsyncReadExt;
+use sha2::digest::DynDigest;
 
 
 #[derive(FromPrimitive, ToPrimitive, Deserialize, Serialize, Clone, PartialEq)]
@@ -39,26 +42,25 @@ impl Display for Mode {
 }
 
 pub struct State {
-    pub id: u16,
+    pub id: u64,
     pub mode: Mode,
     pub name: String,
     pub internal_addr: SocketAddr,
     pub external_addr: Option<SocketAddr>,
 
-    pub neighbours: HashMap<u16, Node>,
+    pub neighbours: HashMap<u64, Node>,
     pub sequence: u8,
-    pub current_lock: [u8; 32],
 }
 
 impl State {
     pub fn new(mode: Mode, name: String,
-               internal_addr: SocketAddr, external_addr: Option<SocketAddr>,
-               neighbours: HashMap<u16, Node>) -> Self {
-        let id : [u8;2] = Sha256::digest(name.as_bytes()).as_slice().try_into().unwrap();
-        let id = u16::from_be_bytes(id);
+               internal_addr: SocketAddr,
+               external_addr: Option<SocketAddr>,
+               neighbours: HashMap<u64, Node>) -> Self {
+        let id = calculate_node_id(&name);
         set_sender_id(id);
 
-        State { id, mode, name, internal_addr, external_addr, neighbours, sequence: 0, current_lock: [0; 32] }
+        State { id, mode, name, internal_addr, external_addr, neighbours, sequence: 0 }
     }
 
     pub fn get_node_information(&self) -> Node {
@@ -92,7 +94,7 @@ impl State {
         neighbour_list
     }
 
-    pub fn get_neighbour_keys(&self) -> HashSet<u16> {
+    pub fn get_neighbour_keys(&self) -> HashSet<u64> {
         self.neighbours.keys().cloned().collect()
     }
 
@@ -103,7 +105,7 @@ impl State {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Node {
-    pub id: u16,
+    pub id: u64,
     pub mode: Mode,
     pub name: String,
     pub external_addr: SocketAddr,
@@ -125,9 +127,14 @@ impl Eq for Node {}
 
 impl Node {
     pub fn new(name: String, mode: Mode, host: SocketAddr) -> Node {
-        let id : [u8;2] = Sha256::digest(name.as_bytes()).as_slice().try_into().unwrap();
-        let id = u16::from_be_bytes(id);
+        let id = calculate_node_id(&name);
         Node { name, mode, external_addr: host, id }
     }
 }
 
+pub fn calculate_node_id(name: &String) -> u64 {
+    let mut hasher = Sha256::new();
+    DynDigest::update(&mut hasher, name.as_bytes());
+    let id: [u8; 32] = hasher.finalize().into();
+    shorten_hash(&id)
+}

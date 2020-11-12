@@ -23,7 +23,7 @@ use sha2::digest::DynDigest;
 lazy_static! {
     // WIP :/
     pub static ref PROTO_VERSION: String = "1.1".to_string();
-    pub static ref SENDER: Mutex<u16> = Mutex::new(0);
+    pub static ref SENDER: Mutex<u64> = Mutex::new(0);
 }
 const PRIME_ONE: u64 = 2999085892127319403;
 const PRIME_TWO: u64 = 13962674565864582377;
@@ -33,7 +33,7 @@ pub fn get_proto_version() -> String {
     return PROTO_VERSION.clone();
 }
 
-pub fn set_sender_id(id: u16) {
+pub fn set_sender_id(id: u64) {
     let mut _id = SENDER.lock().unwrap();
     *_id = id;
 }
@@ -46,7 +46,12 @@ fn calculate_hash(message: &Vec<u8>, timestamp: &DateTime<Utc>) -> ([u8; 32], u6
 
     let message_hash: [u8; 32] = hasher.finalize().into();
 
-    let shorthand = message_hash.chunks(8).into_iter().map(|x: &[u8]| {
+    let shorthand = shorten_hash(&message_hash);
+
+    return (message_hash, shorthand);
+}
+pub fn shorten_hash(message_hash: &[u8; 32]) -> u64 {
+    message_hash.chunks(8).into_iter().map(|x: &[u8]| {
         let chunk: u64 = u64::from_be_bytes(x.try_into().unwrap());
         chunk
     }).fold(0, |x: u64, y: u64| {
@@ -56,9 +61,7 @@ fn calculate_hash(message: &Vec<u8>, timestamp: &DateTime<Utc>) -> ([u8; 32], u6
                 u64::overflowing_mul(x, PRIME_ONE).0,
                 u64::overflowing_mul(y, PRIME_TWO).0).0,
             PRIME_THREE).0
-    });
-
-    return (message_hash, shorthand);
+    })
 }
 
 // Enumeration over the types of protocol messages
@@ -173,7 +176,7 @@ pub struct MessageWrapper {
 
 #[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ResourceRequest {
-    pub owner: u16,
+    pub owner: u64,
     pub message_hash: [u8; 32],
     pub shorthand: u64,
     pub timestamp: DateTime<Utc>,
@@ -194,7 +197,7 @@ impl PartialOrd for ResourceRequest {
 
 #[derive(Serialize, Deserialize)]
 pub struct ResourceRelease {
-    pub owner: u16,
+    pub owner: u64,
     pub message_hash: [u8; 32],
     pub shorthand: u64,
     pub timestamp: DateTime<Utc>,
@@ -247,7 +250,7 @@ pub struct ProtoParcel {
     pub id: u64,
     pub proto_version: String,
     // id of sender
-    pub sender_id: u16,
+    pub sender_id: u64,
     // whether or not packet is a response
     pub is_response: bool,
     // type of packet
