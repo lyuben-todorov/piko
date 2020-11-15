@@ -78,7 +78,7 @@ pub async fn listener_thread(mut listener: TcpListener, state: Arc<RwLock<State>
 
         println!("Accepted");
         tokio::spawn(async move {
-            process_stream(socket, state_ref, pledge_queue, wrk, semaphore).await;
+            process_stream(socket, state_ref, pledge_queue, wrk, semaphore);
         });
     }
 }
@@ -118,7 +118,7 @@ async fn process_stream(mut stream: TcpStream, state_ref: Arc<RwLock<State>>,
                 neighbours.extend_from_slice(state_neighbours.as_slice());
                 let parcel = ProtoParcel::dsc_res(neighbours, self_node);
 
-                write_parcel(&mut stream, &parcel);
+                write_parcel(&mut stream, &parcel).await;
             } else {
                 error!("Body-header type mismatch!");
                 return;
@@ -131,14 +131,14 @@ async fn process_stream(mut stream: TcpStream, state_ref: Arc<RwLock<State>>,
             let seq = state.sequence;
             let parcel = ProtoParcel::seq_res(seq);
             drop(state);
-            write_parcel(&mut stream, &parcel);
+            write_parcel(&mut stream, &parcel).await;
         }
         Type::Ping => {
             // debug!("Received Ping with id {} from node {}", parcel.id, parcel.sender_id);
             let state = state_ref.write().unwrap(); // acquire write lock
             let parcel = ProtoParcel::pong();
             drop(state);
-            write_parcel(&mut stream, &parcel);
+            write_parcel(&mut stream, &parcel).await;
         }
         Type::ProtoError => {
             error!("Proto Error")
@@ -152,7 +152,7 @@ async fn process_stream(mut stream: TcpStream, state_ref: Arc<RwLock<State>>,
                 });
                 drop(state);
                 let ack = ProtoParcel::ack(parcel.id);
-                write_parcel(&mut stream, &ack);
+                write_parcel(&mut stream, &ack).await;
             }
         }
         Type::AddNode => {
@@ -164,7 +164,7 @@ async fn process_stream(mut stream: TcpStream, state_ref: Arc<RwLock<State>>,
                 }
                 drop(state);
                 let ack = ProtoParcel::ack(parcel.id);
-                write_parcel(&mut stream, &ack);
+                write_parcel(&mut stream, &ack).await;
             }
         }
         Type::ResourceRequest => {
@@ -178,7 +178,7 @@ async fn process_stream(mut stream: TcpStream, state_ref: Arc<RwLock<State>>,
                 pledge_queue.push(resource_request);
                 drop(pledge_queue);
                 let ack = ProtoParcel::ack(parcel.id);
-                write_parcel(&mut stream, &ack);
+                write_parcel(&mut stream, &ack).await;
             }
         }
         Type::ResourceRelease => {
@@ -187,14 +187,14 @@ async fn process_stream(mut stream: TcpStream, state_ref: Arc<RwLock<State>>,
 
                 wrk.send(resource_release).unwrap();
                 let parcel = ProtoParcel::ack(parcel.id);
-                write_parcel(&mut stream, &parcel);
+                write_parcel(&mut stream, &parcel).await;
             }
         }
         Type::ExtAddrReq => {
             info!("Got ExtAddrReq with id {} from node {}", parcel.id, parcel.sender_id);
             let addr = stream.peer_addr().unwrap();
             let res = ProtoParcel::ext_addr_res(addr);
-            write_parcel(&mut stream, &res);
+            write_parcel(&mut stream, &res).await;
         }
         _ => {
             error!("Unexpected message type!, {}", parcel.parcel_type);

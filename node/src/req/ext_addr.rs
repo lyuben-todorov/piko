@@ -17,7 +17,7 @@ pub async fn get_ext_addr_from_neighbour(host: &SocketAddr) -> Option<SocketAddr
         }
     };
 
-    write_parcel(&mut stream, &req);
+    write_parcel(&mut stream, &req).await;
 
     match read_parcel(&mut stream).await {
         Ok(res) => {

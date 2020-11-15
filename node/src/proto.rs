@@ -50,18 +50,18 @@ fn calculate_hash(message: &Vec<u8>, timestamp: &DateTime<Utc>) -> ([u8; 32], u6
 
     return (message_hash, shorthand);
 }
+
 pub fn shorten_hash(message_hash: &[u8; 32]) -> u64 {
-    message_hash.chunks(8).into_iter().map(|x: &[u8]| {
-        let chunk: u64 = u64::from_be_bytes(x.try_into().unwrap());
-        chunk
-    }).fold(0, |x: u64, y: u64| {
-        // compute (x * p1 + y * p2) % p3 with overflows
-        u64::overflowing_rem(
-            u64::overflowing_add(
-                u64::overflowing_mul(x, PRIME_ONE).0,
-                u64::overflowing_mul(y, PRIME_TWO).0).0,
-            PRIME_THREE).0
-    })
+    message_hash.chunks(8).into_iter()
+        .map(|x: &[u8]| u64::from_be_bytes(x.try_into().unwrap()))
+        .fold(0, |x: u64, y: u64|
+            // compute (x * p1 + y * p2) % p3 with overflows
+            u64::overflowing_rem(
+                u64::overflowing_add(
+                    u64::overflowing_mul(x, PRIME_ONE).0,
+                    u64::overflowing_mul(y, PRIME_TWO).0).0,
+                PRIME_THREE).0,
+        )
 }
 
 // Enumeration over the types of protocol messages

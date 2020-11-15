@@ -50,7 +50,7 @@ async fn publish_request(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut S
     };
 
     let m_id = req_parcel.id;
-    write_parcel(&mut stream, &req_parcel);
+    write_parcel(&mut stream, &req_parcel).await;
 
     let res_parcel = match read_parcel(&mut stream).await {
         Ok(parcel) => parcel,
@@ -88,7 +88,7 @@ async fn publish_release(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut S
         }
     };
     let m_id = req_parcel.id;
-    write_parcel(&mut stream, &req_parcel);
+    write_parcel(&mut stream, &req_parcel).await;
 
     let res_parcel = match read_parcel(&mut stream).await {
         Ok(parcel) => parcel,

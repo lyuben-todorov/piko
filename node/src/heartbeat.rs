@@ -94,7 +94,7 @@ async fn ping(node: &Node, req_parcel: &ProtoParcel, tx: &mut Sender<(u64, bool)
             return;
         }
     };
-    write_parcel(&mut stream, &req_parcel);
+    write_parcel(&mut stream, &req_parcel).await;
     let res_parcel = match read_parcel(&mut stream).await {
         Ok(parcel) => parcel,
         Err(e) => {

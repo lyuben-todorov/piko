@@ -1,6 +1,6 @@
 use std::sync::{Arc, RwLock, mpsc};
 use crate::state::{Mode, State, Node};
-use std::net::{ SocketAddr};
+use std::net::{SocketAddr};
 
 use crate::proto::{Type, ProtoParcel, Body};
 use std::sync::mpsc::{Sender, Receiver};
@@ -9,9 +9,10 @@ use log::{error, info};
 use futures::{stream, StreamExt};
 use crate::net::{write_parcel, read_parcel};
 use tokio::net::TcpStream;
+use std::cell::RefCell;
 
 // Start discovery routine
-pub fn dsc(state: Arc<RwLock<State>>, neighbour_list: &Vec<SocketAddr>) {
+pub fn dsc(state: Arc<RwLock<State>>, neighbour_list: Vec<SocketAddr>) {
     // Skip discovery
     if neighbour_list.len() == 0 {
         let mut state = state.write().unwrap();
@@ -27,16 +28,28 @@ pub fn dsc(state: Arc<RwLock<State>>, neighbour_list: &Vec<SocketAddr>) {
     let node = state_ref.get_node_information();
     drop(state_ref);
     let req_parcel = ProtoParcel::dsc_req(node); // Use same object for serializing each request
-
-
+    let req_parcel = Arc::new(req_parcel);
+    let list_size = neighbour_list.len();
     // TODO Aync Parallel discovery
+    let responses = stream::iter(neighbour_list)
+        .map(|url| {
+            let sender = sender.clone();
+            let req_parcel = req_parcel.clone();
+            tokio::spawn(async move {
+                discover(&url, req_parcel, sender).await
+            })
+        })
+        .buffer_unordered(list_size);
+
     let mut neighbours: HashSet<Node> = HashSet::new();
 
     // collect results
     for nodes in receiver.iter() {
         neighbours.extend(nodes);
     }
+
     let mut state = state.write().unwrap(); // acquire write lock
+
     for neighbour in neighbours {
         info!("Found {}:{}!", neighbour.name, neighbour.mode);
         state.add_neighbour(neighbour);
@@ -46,7 +59,7 @@ pub fn dsc(state: Arc<RwLock<State>>, neighbour_list: &Vec<SocketAddr>) {
 
 // Request/response on same tcp stream
 // Writes result to state after acquiring write lock
-async fn discover(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<Vec<Node>>) {
+async fn discover(host: &SocketAddr, req_parcel: Arc<ProtoParcel>, tx: Sender<Vec<Node>>) {
     info!("Connecting to {}", host);
     let mut stream = match TcpStream::connect(host).await {
         Ok(stream) => stream,
@@ -56,7 +69,7 @@ async fn discover(host: &SocketAddr, req_parcel: &ProtoParcel, tx: &mut Sender<V
         }
     };
 
-    write_parcel(&mut stream, req_parcel);
+    write_parcel(&mut stream, req_parcel.as_ref()).await;
 
     let res_parcel = match read_parcel(&mut stream).await {
         Ok(parcel) => parcel,

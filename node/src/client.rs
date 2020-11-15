@@ -126,16 +126,16 @@ async fn write_res(stream: &mut TcpStream, res: ClientRes) {
     };
 }
 
-fn ok(stream: &mut TcpStream) {
-    write_res(stream, ClientRes::Success { message: "Ok".to_string(), bytes: vec![] });
+async fn ok(stream: &mut TcpStream) {
+    write_res(stream, ClientRes::Success { message: "Ok".to_string(), bytes: vec![] }).await;
 }
 
-fn ok_with_message(stream: &mut TcpStream, message: &str) {
-    write_res(stream, ClientRes::Success { message: message.to_string(), bytes: vec![] });
+async fn ok_with_message(stream: &mut TcpStream, message: &str) {
+    write_res(stream, ClientRes::Success { message: message.to_string(), bytes: vec![] }).await;
 }
 
-fn err(stream: &mut TcpStream, message: &str) {
-    write_res(stream, ClientRes::Error { message: message.to_string() });
+async fn err(stream: &mut TcpStream, message: &str) {
+    write_res(stream, ClientRes::Error { message: message.to_string() }).await;
 }
 
 pub async fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, // Node state & listener
@@ -176,8 +176,8 @@ pub async fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, /
                     let mut client_list = client_list.write().unwrap();
                     let write = client_list.insert(client_id, RwLock::from(client));
                     match write {
-                        None => ok(&mut stream),
-                        Some(_) => ok_with_message(&mut stream, "Client exists, flushed queue")
+                        None => ok(&mut stream).await,
+                        Some(_) => ok_with_message(&mut stream, "Client exists, flushed queue").await
                     }
                 }
                 ClientReq::Unsubscribe { client_id } => {
@@ -185,15 +185,15 @@ pub async fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, /
 
                     let v = client_list.write().unwrap().remove(&client_id);
                     match v {
-                        None => err(&mut stream, "Client wasn't previously subscribed"),
-                        Some(_) => ok(&mut stream)
+                        None => err(&mut stream, "Client wasn't previously subscribed").await,
+                        Some(_) => ok(&mut stream).await
                     }
                 }
                 ClientReq::Poll { client_id } => {
                     let client_list = client_list.read().unwrap();
                     let client = match client_list.get(&client_id) {
                         None => {
-                            err(&mut stream, "client not subscribed.");
+                            err(&mut stream, "client not subscribed.").await;
                             return;
                         }
                         Some(client) => { client }
@@ -209,14 +209,14 @@ pub async fn client_listener(listener: TcpListener, state: Arc<RwLock<State>>, /
                                 message: "Queue empty".to_string(),
                                 bytes: vec![],
                             };
-                            write_res(&mut stream, res);
+                            write_res(&mut stream, res).await;
                         }
                         Some(message) => {
                             let res = ClientRes::Success {
                                 message: "Message:".to_string(),
                                 bytes: message.to_vec(),
                             };
-                            write_res(&mut stream, res);
+                            write_res(&mut stream, res).await;
                         }
                     }
                 }

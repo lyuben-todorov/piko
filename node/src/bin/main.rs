@@ -198,7 +198,7 @@ fn main() -> Result<(), std::io::Error> {
             match mode {
                 Mode::Dsc => {
                     drop(state_lock);
-                    dsc(state.clone(), &neighbour_socket_addresses);
+                    dsc(state.clone(), neighbour_socket_addresses.clone());
                 }
                 Mode::Wrk => {
                     drop(state_lock);
