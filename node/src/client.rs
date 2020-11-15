@@ -163,8 +163,7 @@ async fn process(mut stream: TcpStream,
                  client_list: Arc<RwLock<HashMap<u64, RwLock<Client<'_>>>>>,
                  semaphore: Arc<OrdSemaphore<DateTime<Utc>>>,
                  pledge_queue: Arc<Mutex<BinaryHeap<ResourceRequest>>>, // Resource queue
-                         Err(err) => err
-pending_messages: Arc<Mutex<HashMap<u64, (ResourceRelease, bool)>>>,
+                 pending_messages: Arc<Mutex<HashMap<u64, (ResourceRelease, bool)>>>,
 ) -> Result<(), Box<dyn Error>> {
 
     // debug!("Received message from client!");
@@ -203,10 +202,9 @@ pending_messages: Arc<Mutex<HashMap<u64, (ResourceRelease, bool)>>>,
         }
         ClientReq::Poll { client_id } => {
             let client_list = client_list.read().unwrap();
-            let client = match client_list.get(&client_id) {
+            let mut client = match client_list.get(&client_id) {
                 None => {
-                    err(&mut stream, "client not subscribed.").await;
-                    return;
+                    err(&mut stream, "client not subscribed.").await
                 }
                 Some(client) => { client }
             };
@@ -221,14 +219,14 @@ pending_messages: Arc<Mutex<HashMap<u64, (ResourceRelease, bool)>>>,
                         message: "Queue empty".to_string(),
                         bytes: vec![],
                     };
-                    write_res(&mut stream, res).await;
+                    write_res(&mut stream, res).await
                 }
                 Some(message) => {
                     let res = ClientRes::Success {
                         message: "Message:".to_string(),
                         bytes: message.to_vec(),
                     };
-                    write_res(&mut stream, res).await;
+                    write_res(&mut stream, res).await
                 }
             }
         }
@@ -270,10 +268,12 @@ pending_messages: Arc<Mutex<HashMap<u64, (ResourceRelease, bool)>>>,
                     let mut messages = pending_messages.lock().unwrap();
                     messages.entry(key).and_modify(|x| x.1 = true);
                     debug!("Resource REQUEST acknowledged!");
+                    Ok(())
                 }
                 _ => {
                     client.consume();
                     error!("Resource REQUEST failed!");
+                    Ok(())
                 }
             }
             // ack client
@@ -282,8 +282,7 @@ pending_messages: Arc<Mutex<HashMap<u64, (ResourceRelease, bool)>>>,
             loop {
                 let pledge_queue = pledge_queue.lock().unwrap();
                 if pledge_queue.len() == 0 {
-                    ok(&mut stream);
-                    return;
+                    ok(&mut stream)
                 } else {
                     drop(pledge_queue);
                     std::thread::sleep(Duration::from_millis(50));
