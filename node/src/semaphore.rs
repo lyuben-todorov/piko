@@ -1,25 +1,24 @@
-use std::collections::{BinaryHeap};
-use std::sync::RwLock;
 use std::cmp::{Ordering, Reverse};
-use crossbeam_channel::{bounded, Sender, Receiver};
-use std::ptr;
+use std::collections::BinaryHeap;
 
 /// The goal of this data structure is to provide an explicit ordering of async events in a multi-threaded
 /// process. It holds a sequence of event handles with a defined total ordering between them. A
 /// thread can then call `wait_until` and will be blocked until all the event handles before it
 /// are resolved.
 pub struct OrdSemaphore<T: Ord> {
-    events: RwLock<BinaryHeap<Reverse<Waiter<T>>>>,
+    events: Mutex<BinaryHeap<Reverse<Waiter<T>>>>,
 }
 
 impl<T: Ord> OrdSemaphore<T> {
     pub fn new() -> OrdSemaphore<T> {
-        OrdSemaphore { events: RwLock::new(BinaryHeap::new()) }
+        OrdSemaphore {
+            events: Mutex::new(BinaryHeap::new()),
+        }
     }
 
     pub fn create_task(&self, task: T) -> Client {
         let (client, waiter) = create_pair(task);
-        let mut queue = self.events.write().unwrap();
+        let mut queue = self.events.lock().unwrap();
         queue.push(Reverse(waiter));
 
         client
@@ -28,76 +27,39 @@ impl<T: Ord> OrdSemaphore<T> {
     /// Blocks the caller until all tasks before `event` have been completed.
     pub fn wait_until(&self, event: &T) {
         loop {
-            let queue = self.events.read().unwrap();
-            match queue.peek() {
-                None => {
-                    // explicit return, queue is empty
-                    return;
-                }
-                Some(task) => {
-                    // if event happened after latest task
-                    if event.gt(&task.0.event) {
-                        // clone channel and drop read lock
-                        let channel = task.0.channel.clone();
-
-                        // get raw pointer
-                        let pointer = task as *const Reverse<Waiter<T>>;
-                        drop(queue);
-
-                        // this blocks until the respective Client has released
-                        channel.recv().unwrap();
-
-                        // at this point, we want to do a queue.pop(), however we should prevent
-                        // multiple threads from removing multiple elements
-                        let mut queue = self.events.write().unwrap();
-
-                        // comparing raw pointers probably isn't the best idea.
-                        queue.retain(|x| !ptr::eq(x, pointer));
-                    } else {
-                        // explicit return, no backlog left
-                        return;
+            {
+                let mut queue = self.events.lock().unwrap();
+                loop {
+                    match queue.peek() {
+                        None => return,
+                        Some(w) if w.0.event >= *event => return,
+                        Some(w) if w.0.watcher.is_consumed() => drop(queue.pop()),
+                        Some(w) => break w.0.watcher.clone(),
                     }
                 }
             }
+                .wait_until_consumed()
         }
     }
 }
 
 fn create_pair<T: Ord>(event: T) -> (Client, Waiter<T>) {
-    let (tx, rx): (Sender<()>, Receiver<()>) = bounded(1);
-
-    let client = Client::new(tx);
-    let waiter = Waiter::new(event, rx);
+    let (client, watcher) = Client::new();
+    let waiter = Waiter::new(event, watcher);
 
     (client, waiter)
 }
 
 ///
-/// The `Client` is given to the creator of the event and belongs to the execution context. 
-/// 
-pub struct Client {
-    channel: Sender<()>
-}
-
-impl Client {
-    pub fn new(tx: Sender<()>) -> Client {
-        Client { channel: tx }
-    }
-    pub fn consume(&self) {
-        self.channel.send(()).unwrap();
-    }
-}
-
-///
 /// The `Waiter` stays inside our semaphore.
-pub struct Waiter<T: Ord + Eq + PartialEq> {
+struct Waiter<T: Ord + Eq + PartialEq> {
     event: T,
-    channel: Receiver<()>,
+    watcher: Watcher,
 }
 
 impl<T: Ord> Waiter<T> {
-    pub fn new(event: T, rx: Receiver<()>) -> Waiter<T> {
-        Waiter { event, channel: rx }
+    fn new(event: T, watcher: Watcher) -> Waiter<T> {
+        Waiter { event, watcher }
     }
 }
 
@@ -121,3 +83,60 @@ impl<T: Ord> PartialEq for Waiter<T> {
 
 impl<T: Ord> Eq for Waiter<T> {}
 
+use std::sync::{
+    atomic::{self, AtomicBool},
+    Arc, Condvar, Mutex,
+};
+
+///
+/// The `Client` is given to the creator of the event and belongs to the execution context.
+///
+#[derive(Clone)]
+pub struct Client(Arc<Inner>);
+struct Inner {
+    done: AtomicBool,
+    done_mutex: Mutex<bool>,
+    cv: Condvar,
+}
+
+impl Client {
+    /// Indicates the client is done.
+    /// Only the first call to [`consume`][`Client::consume`] will have any effect.
+    /// Subsequent calls or calls on this [`Client`] or any of its clones are allowed but ineffective.
+    pub fn consume(&self) {
+        if !(self.0.done.load(atomic::Ordering::Relaxed)) {
+            self.0.done.store(true, atomic::Ordering::Release);
+            *self.0.done_mutex.lock().unwrap() = true;
+            self.0.cv.notify_all();
+        }
+    }
+
+    fn new() -> (Self, Watcher) {
+        let i = Inner {
+            done: false.into(),
+            done_mutex: Mutex::new(false),
+            cv: Condvar::new(),
+        };
+        let client = Client(Arc::new(i));
+        let watcher = Watcher(client.0.clone());
+        (client, watcher)
+    }
+}
+
+#[derive(Clone)]
+struct Watcher(Arc<Inner>);
+impl Watcher {
+    fn is_consumed(&self) -> bool {
+        self.0.done.load(atomic::Ordering::Acquire)
+    }
+    fn wait_until_consumed(self) {
+        if !self.is_consumed() {
+            drop(
+                self.0
+                    .cv
+                    .wait_while(self.0.done_mutex.lock().unwrap(), |&mut done| !done)
+                    .unwrap(),
+            )
+        }
+    }
+}
